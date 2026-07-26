@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#D82D33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Limatco Turnos">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Limatco Turnos 2026&quot;,&quot;short_name&quot;:&quot;Limatco&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%231e3a5f&quot;,&quot;theme_color&quot;:&quot;%231e3a5f&quot;,&quot;start_url&quot;:&quot;./&quot;}">
+
+<title>Limatco — Gestión de Turnos 2026</title>
+<meta name="description" content="Sistema de gestión de turnos Bodega BLA · Julio–Diciembre 2026">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(135deg,#7A1215,#D82D33);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.hdr-logo{font-size:28px;}
+.hdr-title h1{font-size:20px;font-weight:800;}
+.hdr-title p{font-size:12px;opacity:.75;margin-top:1px;}
+.hdr-right{margin-left:auto;display:flex;gap:10px;}
+.hdr-stat{text-align:center;background:rgba(255,255,255,.15);border-radius:8px;padding:5px 12px;}
+.hdr-stat span{display:block;font-size:18px;font-weight:800;}
+.hdr-stat small{font-size:10px;opacity:.8;}
+
+/* ── TABS ── */
+.tabs{background:#fff;border-bottom:2px solid #e2e8f0;padding:0 28px;display:flex;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow-x:auto;}
+.tab{padding:12px 18px;cursor:pointer;font-weight:700;font-size:13px;color:#64748b;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s;}
+.tab:hover{color:#D82D33;background:#f8fafc;}
+.tab.active{color:#D82D33;border-bottom-color:#D82D33;}
+
+/* ── CONTENT ── */
+.content{padding:20px 28px;max-width:1400px;margin:0 auto;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 16px;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:12px;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:#D82D33;color:#fff;}.btn-primary:hover{background:#1e40af;}
+.btn-secondary{background:#e2e8f0;color:#374151;}.btn-secondary:hover{background:#cbd5e0;}
+.btn-success{background:#059669;color:#fff;}.btn-success:hover{background:#047857;}
+.btn-danger{background:#dc2626;color:#fff;}.btn-danger:hover{background:#b91c1c;}
+.btn-warning{background:#d97706;color:#fff;}.btn-warning:hover{background:#b45309;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.btn-outline{background:transparent;border:1.5px solid #e2e8f0;color:#374151;}.btn-outline:hover{background:#f8fafc;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden;}
+.card-body{padding:18px;}
+.card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#64748b;margin-bottom:12px;}
+
+/* ── STAT CARDS ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;}
+.sc{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.07);border-top:3px solid;}
+.sc.blue{border-top-color:#D82D33;}.sc.green{border-top-color:#059669;}
+.sc.cyan{border-top-color:#0891b2;}.sc.purple{border-top-color:#7c3aed;}
+.sc.amber{border-top-color:#d97706;}.sc.red{border-top-color:#dc2626;}
+.sc-num{font-size:28px;font-weight:800;line-height:1;}
+.sc-label{font-size:11px;color:#64748b;margin-top:2px;font-weight:600;}
+
+/* ── DASHBOARD ── */
+.dash-today{background:linear-gradient(135deg,#7A1215,#D82D33);color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:18px;}
+.dash-today h2{font-size:18px;font-weight:800;margin-bottom:4px;}
+.dash-today p{font-size:12px;opacity:.8;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.dash-section{display:flex;flex-direction:column;gap:12px;}
+.shift-block{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+.shift-block h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.shift-09 h4{color:#5b21b6;border-bottom:2px solid #ede9fe;padding-bottom:5px;}
+.shift-10 h4{color:#155e75;border-bottom:2px solid #cffafe;padding-bottom:5px;}
+.shift-libre h4{color:#065f46;border-bottom:2px solid #d1fae5;padding-bottom:5px;}
+.emp-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;}
+.emp-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-fijo{background:#7c3aed;}.dot-rot9{background:#0891b2;}
+.dot-a{background:#059669;}.dot-b{background:#dc2626;}
+.absent-badge{font-size:10px;padding:1px 6px;background:#fee2e2;color:#991b1b;border-radius:4px;font-weight:700;}
+.vacation-badge{font-size:10px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-weight:700;}
+.license-badge{font-size:10px;padding:1px 6px;background:#dbeafe;color:#8B1A1F;border-radius:4px;font-weight:700;}
+.permission-badge{font-size:10px;padding:1px 6px;background:#f3e8ff;color:#6d28d9;border-radius:4px;font-weight:700;}
+
+/* ── CALENDAR ── */
+.cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.cal-toolbar h2{font-size:20px;font-weight:800;flex:1;text-align:center;}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.chip.active{border-color:currentColor;}
+.chip-all{background:#f1f5f9;color:#374151;}.chip-all.active{background:#e2e8f0;}
+.chip-fijo{background:#ede9fe;color:#5b21b6;}
+.chip-rot9{background:#cffafe;color:#155e75;}
+.chip-a{background:#d1fae5;color:#065f46;}
+.chip-b{background:#ffe4e6;color:#9f1239;}
+.today-box{background:#fff;border-radius:10px;padding:12px 16px;margin-bottom:14px;border-left:4px solid #D82D33;box-shadow:0 1px 3px rgba(0,0,0,.07);display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.today-box .tb-date{font-size:15px;font-weight:800;color:#1e293b;}
+.today-box .tb-pills{display:flex;gap:8px;flex-wrap:wrap;}
+.tb-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;}
+.cal-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-head div{padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+.cal-head div:nth-child(6){background:#fef9c3;color:#92400e;}
+.cal-head div:nth-child(7){background:#fee2e2;color:#991b1b;}
+.cal-head div:not(:nth-child(6)):not(:nth-child(7)){background:#7A1215;color:#fff;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cc{border:1px solid #f1f5f9;min-height:110px;padding:7px 8px;position:relative;transition:background .1s;}
+.cc.empty{background:#f8fafc;}.cc.is-sun{background:#fff8f8;}
+.cc.is-sat{background:#fffef0;}.cc.is-work{cursor:pointer;}
+.cc.is-work:hover{background:#fff8f8;box-shadow:inset 0 0 0 2px #fca5a5;}
+.cc.is-sat:hover{background:#fefce8;box-shadow:inset 0 0 0 2px #fbbf24;}
+.cc.selected{box-shadow:inset 0 0 0 2px #1d4ed8!important;background:#fff1f2!important;}
+.cc.out-range{opacity:.3;pointer-events:none;}
+.cc.has-override::after{content:'';position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#ef4444;}
+.dn{font-size:14px;font-weight:800;margin-bottom:4px;}
+.is-sat .dn{color:#92400e;}.is-sun .dn{color:#991b1b;}
+.is-today-cell .dn{background:#D82D33;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-bottom:4px;}
+.cc-content{display:flex;flex-direction:column;gap:2px;}
+.cpill{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:3px;width:fit-content;}
+.cpill-sat-a{background:#d1fae5;color:#065f46;}
+.cpill-sat-b{background:#ffe4e6;color:#9f1239;}
+.cpill-rot-libre{background:#cffafe;color:#155e75;}
+.cpill-rot-work{background:#e0e7ff;color:#3730a3;}
+.cpill-fijo{background:#ede9fe;color:#5b21b6;}
+.cpill-q{background:#fef3c7;color:#92400e;}
+.cpill-09{background:#f5f3ff;color:#5b21b6;}
+.cpill-10{background:#ecfeff;color:#155e75;}
+
+/* ── DAY DETAIL / EDIT PANEL ── */
+.day-panel{background:#fff;border-radius:12px;padding:18px 22px;margin-top:14px;box-shadow:0 1px 4px rgba(0,0,0,.1);border-left:4px solid #D82D33;display:none;}
+.day-panel.open{display:block;}
+.dp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.dp-head h3{font-size:16px;font-weight:800;flex:1;}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.dp-section h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid;}
+.dp-section.work09 h4{color:#5b21b6;border-bottom-color:#ede9fe;}
+.dp-section.work10 h4{color:#155e75;border-bottom-color:#cffafe;}
+.dp-section.libre h4{color:#065f46;border-bottom-color:#d1fae5;}
+.dp-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+.dp-chip{padding:4px 10px;border-radius:16px;font-size:12px;font-weight:600;}
+.dpc-fijo{background:#ede9fe;color:#5b21b6;}
+.dpc-rot9-w{background:#e0e7ff;color:#3730a3;}
+.dpc-rot9-l{background:#cffafe;color:#155e75;}
+.dpc-a{background:#d1fae5;color:#065f46;}
+.dpc-b{background:#ffe4e6;color:#9f1239;}
+.dpc-absent{background:#fee2e2;color:#991b1b;text-decoration:line-through;}
+.sublbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-top:8px;margin-bottom:3px;}
+
+/* ── QUINCENAS ── */
+.q-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.q-toolbar h2{font-size:18px;font-weight:800;flex:1;}
+.qc{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:12px;}
+.qc-head{background:#7A1215;color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.qc-head:hover{background:#1e40af;}
+.qc-head h3{font-size:14px;font-weight:800;}
+.qc-head .sub{font-size:11px;opacity:.75;}
+.q-toggle{font-size:16px;transition:transform .2s;}
+.qc-head.open .q-toggle{transform:rotate(180deg);}
+.qc-body{padding:16px;display:none;grid-template-columns:repeat(3,1fr);gap:14px;}
+.qc-body.open{display:grid;}
+.qg h4{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;}
+.qg-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:8px;}
+.qg-badge.b09{background:#ede9fe;color:#5b21b6;}
+.qg-badge.b10{background:#cffafe;color:#155e75;}
+.qg li{font-size:12px;padding:4px 8px;border-radius:5px;margin-bottom:2px;list-style:none;}
+.li-fijo{background:#f5f3ff;}.li-r9w{background:#eef2ff;}.li-r9l{background:#ecfeff;}
+.sat-row{background:#f8fafc;border-radius:7px;padding:8px 10px;margin-top:8px;margin-bottom:5px;}
+.sat-row .sr-date{font-size:11px;font-weight:800;color:#92400e;margin-bottom:5px;}
+.sr-badge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:3px;margin-right:4px;}
+.srb-libre{background:#059669;color:#fff;}.srb-work{background:#dc2626;color:#fff;}
+.srb-rot{background:#0891b2;color:#fff;}
+
+/* ── EMPLOYEES ── */
+.emp-toolbar{padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.inp{padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;}
+.inp:focus{outline:none;border-color:#D82D33;box-shadow:0 0 0 3px rgba(216,45,51,.1);}
+.sel{padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:600;color:#374151;background:#fff;}
+table{width:100%;border-collapse:collapse;}
+th{background:#f8fafc;padding:10px 14px;text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0;}
+td{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;}
+tr:hover td{background:#f8fafc;}
+.tb{padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;}
+.tb-FIJO{background:#ede9fe;color:#5b21b6;}.tb-ROT9{background:#cffafe;color:#155e75;}
+.tb-A{background:#d1fae5;color:#065f46;}.tb-B{background:#ffe4e6;color:#9f1239;}
+
+/* ── REPORTS ── */
+.rep-toolbar{background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.rep-toolbar .fg{display:flex;flex-direction:column;gap:4px;}
+.rep-toolbar label{font-size:11px;font-weight:700;color:#64748b;}
+.rep-preview{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden;}
+.rep-head{padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;gap:10px;align-items:center;}
+.rep-head h3{font-size:15px;font-weight:800;flex:1;}
+.rep-table{width:100%;border-collapse:collapse;}
+.rep-table th{background:#7A1215;color:#fff;padding:9px 14px;text-align:left;font-size:11px;font-weight:700;}
+.rep-table td{padding:9px 14px;border-bottom:1px solid #f1f5f9;font-size:12px;}
+.rep-table tr:hover td{background:#f8fafc;}
+
+/* ── OVERLAY & MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:24px 28px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:16px;}
+.fr{margin-bottom:13px;}
+.fr label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;}
+.fr input,.fr select,.fr textarea{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;}
+.fr input:focus,.fr select:focus,.fr textarea:focus{outline:none;border-color:#D82D33;box-shadow:0 0 0 3px rgba(216,45,51,.1);}
+.fr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-info{background:#fff1f2;border-left:4px solid #D82D33;padding:9px 12px;border-radius:0 7px 7px 0;font-size:11px;color:#8B1A1F;margin-bottom:14px;line-height:1.5;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.modal-lg{width:700px;}.modal-md{width:500px;}
+
+/* Override table */
+.ov-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.ov-table th{background:#f8fafc;padding:7px 10px;text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#64748b;border-bottom:2px solid #e2e8f0;}
+.ov-table td{padding:6px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;vertical-align:middle;}
+.ov-table select{padding:4px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:11px;font-weight:600;}
+.ov-table input[type=text]{padding:4px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:11px;width:100%;}
+.ov-group-head{background:#f1f5f9;padding:5px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#374151;background:#fff;padding:4px 10px;border-radius:16px;border:1px solid #e2e8f0;}
+.ldot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+
+/* ══════════════════════════════════════════
+   MOBILE-FIRST RESPONSIVE (≤ 768px)
+══════════════════════════════════════════ */
+@media(max-width:768px){
+
+  /* Header compact */
+  .hdr{padding:10px 14px;gap:10px;}
+  .hdr-logo{font-size:22px;}
+  .hdr-title h1{font-size:15px;}
+  .hdr-title p{font-size:10px;}
+  .hdr-right{display:none;}
+
+  /* ── Bottom tab bar ── */
+  .tabs{
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    z-index:200;padding:0;
+    justify-content:space-around;
+    border-bottom:none;border-top:2px solid #e2e8f0;
+    box-shadow:0 -2px 10px rgba(0,0,0,.12);
+    height:58px;align-items:stretch;
+    padding-bottom:env(safe-area-inset-bottom,0);
+  }
+  .tab{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:4px 2px;font-size:9px;font-weight:700;
+    border-bottom:none;border-top:3px solid transparent;
+    margin-bottom:0;gap:1px;line-height:1.2;
+    white-space:normal;text-align:center;
+  }
+  .tab.active{border-top-color:#D82D33;border-bottom:none;color:#D82D33;background:#fff1f2;}
+  .tab-icon{font-size:18px;line-height:1;}
+
+  /* Content padding */
+  .content{
+    padding:10px 10px 68px;
+    max-width:100%;
+    padding-bottom:calc(68px + env(safe-area-inset-bottom,0));
+  }
+
+  /* ── Dashboard ── */
+  .dash-today{padding:14px 16px;margin-bottom:12px;}
+  .dash-today h2{font-size:15px;}
+  .dash-grid{grid-template-columns:1fr;gap:10px;}
+  .stat-row{grid-template-columns:repeat(3,1fr);gap:8px;}
+  .sc{padding:10px 10px;}
+  .sc-num{font-size:22px;}
+  .sc-label{font-size:10px;}
+  .shift-block{padding:12px 12px;}
+
+  /* ── Calendar ── */
+  .cal-toolbar{gap:6px;margin-bottom:8px;}
+  .cal-toolbar h2{font-size:16px;}
+  .cal-head div{font-size:9px;padding:6px 0;letter-spacing:0;}
+  .cc{min-height:56px;padding:4px 3px;}
+  .dn{font-size:12px;margin-bottom:2px;}
+  .cpill{font-size:8px;padding:1px 3px;line-height:1.3;}
+  .cc-content{display:flex;flex-direction:column;gap:1px;}
+  .legend{gap:4px;}
+  .li{font-size:10px;padding:3px 7px;}
+  .today-box{flex-direction:column;align-items:flex-start;gap:8px;padding:10px 12px;}
+  .today-box .tb-date{font-size:13px;}
+  .filter-chips{gap:4px;}
+  .chip{font-size:11px;padding:4px 10px;}
+
+  /* Day detail full-width */
+  .day-panel{padding:14px 12px;}
+  .dp-grid{grid-template-columns:1fr;gap:12px;}
+  .dp-head{flex-wrap:wrap;gap:6px;}
+  .dp-head h3{font-size:14px;width:100%;}
+
+  /* ── Quincenas ── */
+  .qc-body.open{grid-template-columns:1fr;}
+  .q-toolbar{gap:8px;}
+  .q-toolbar h2{font-size:16px;width:100%;}
+  .qc-head{padding:10px 14px;}
+  .qc-head h3{font-size:13px;}
+  .qc-body{padding:12px;}
+
+  /* ── Employees ── */
+  .emp-toolbar{padding:8px 10px;gap:6px;}
+  .emp-toolbar .inp{font-size:13px;}
+  .emp-stats-cards{display:flex;flex-direction:column;gap:8px;}
+
+  /* Table horizontal scroll on mobile */
+  .card > .emp-toolbar + table,
+  .card table{
+    display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    white-space:nowrap;
+  }
+  th{padding:8px 10px;font-size:9px;}
+  td{padding:8px 10px;font-size:12px;}
+
+  /* ── Reports ── */
+  .rep-toolbar{flex-direction:column;gap:8px;}
+  .rep-toolbar .fg{width:100%;}
+  .rep-toolbar .fg input,.rep-toolbar .fg select{width:100%;}
+  .rep-head{padding:10px 12px;flex-wrap:wrap;}
+  .rep-preview{overflow-x:auto;}
+
+  /* ── Modals: slide up from bottom ── */
+  .overlay{align-items:flex-end;}
+  .modal{
+    border-radius:16px 16px 0 0;
+    max-height:88vh;
+    width:100%;max-width:100%;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom,0));
+  }
+  .modal::before{
+    content:'';display:block;width:36px;height:4px;
+    background:#d1d5db;border-radius:2px;
+    margin:-4px auto 14px;
+  }
+  .modal-lg,.modal-md{width:100%;}
+  .modal h3{font-size:16px;}
+  .modal-actions{flex-wrap:wrap;gap:6px;}
+  .modal-actions .btn{flex:1;justify-content:center;}
+  .fr-row{grid-template-columns:1fr 1fr;}
+
+  /* Buttons */
+  .btn{padding:9px 14px;font-size:13px;}
+  .btn-sm{padding:7px 12px;font-size:12px;}
+
+  /* Override table on mobile */
+  .ov-table{font-size:11px;}
+  .ov-table th{padding:6px 8px;}
+  .ov-table td{padding:5px 6px;}
+  .ov-table select{font-size:11px;padding:3px 5px;}
+  .ov-table input[type=text]{font-size:11px;padding:3px 6px;}
+
+  /* Dashboard absences table */
+  .rep-table{font-size:11px;}
+  .rep-table th,.rep-table td{padding:7px 10px;}
+}
+
+/* ── Extra small phones ── */
+@media(max-width:380px){
+  .stat-row{grid-template-columns:repeat(2,1fr);}
+  .tab{font-size:8px;}
+  .tab-icon{font-size:16px;}
+  .cc{min-height:48px;}
+  .cpill{display:none;}
+}
+
+@media print{.tabs,.hdr-right,.btn,.overlay,.modal,.day-panel .dp-head .btn{display:none!important;}.panel{display:block!important;}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo" style="display:flex;align-items:center"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAE2klEQVR42u3YW4hVVRgH8P+3LvvsM2fmHOfizBlnRmcyQSWLUBElKCQTozR6KfGlEoQuFoGV1FMPXSSKElHxAkJhYkGvqRkmBmXkjbyVo87kOJrjOXM5l7332mt9PTjEjM1MPYXQWU9rs9Zm/fZa3/rW3pvOzZmLO6kI3GGlAqqAKqAKqAKqgCqgCujOAxGB6D8DqbGQgojYOTCDCFEEEDwNZpISADsLEAkBYLjbmI8BDDcJQUQTdZ4IRMSFojOGkj75PgeBbG1h51zvNVLK5vIARE01gLh/gAiiuhpCAqOHYWZjSAhISUK4UslGEQDh+5RIwNoJJn4UiAS5IKxZ9XRy9syBfQeCQ4dlS2vbF3s4CrqXrRCpVN36dULI/NYdzKh/6w12Lr9tJ9/oQyIxPB9EsJZ8X6TTCEMuFFyxqOfNnfTkCrZ2YPdec/481U4igCMDY/5uUrdPT2RqljycfmBhdOVq+ev95GkBZq2Znexon7xqJYDCocNQqmHlUwAK+74Jr/bCOQ5D8jx2DuUguXRJ26aPBw5+2/vsmuTyx1u3bvS0BhD3XM0dParn3EOtLYCz3x2Bdf+8ZK5QZGsRBKQ929d3fecuAvhGn9fawtaC2burg5I+YssE1dxUKhRSy5bKpqbg9NlEe3tw6qSe1i6Tvje1jTqmNbzyoqd1+fceWxiCY1gnPS85a1Z0pSeOnWDHUo4MrHGCWkooBWZRXztl7fMuCAe37fCmZG8Ftb9gPmntlBSAmlSrZkxv275FShkZ42ndu2lz5qEHwVx975y6l1/y21psHPe8tt6cPiPT6arHHm3ZslH7PoA/Zs7Ivf0OVVWNBI277blUsrkcwhDOwVkGdGsrgMFz51MLF1TNn9f/w48M6IaG1OLFUsqh4yfNhU44x8Vi8ew5EAU3btibfTqTcWFkL3RiYCDu7q5b+4L2/ZsHDkZ9N+tXrVQzZ3K5DCEmBBGBWd9/X/q5Z0RjE0wMZqG1bm5moLD/gE4ktFbFAwfBrKY0ybpaOJf7dHf+870g4lJ56MuvwBycOFH4bE8chSrpZ9as9pc+4i9/TKWr2bnr724onjktAdWc5dGhPQaIlARRwxPLp278UN09HbEhIkpV6SnNAIKfjrlS0eT7o+OnQKSyTXZwAEJk33y9cd2rIIJS5HkgEjU1tufq4KEjJER2zeqO7ZuTba2lX86SEO27dmQWLYqtNZe7yPPg3EQgZyJr4rhYNOUAYRCHkS2VKT2JUykzNBj9+lv5Ulfp3Hlz6bIpFmRjc/Hw9+Vr10S6pni5y8UW1rFz1sQ2CJHwbr63YeDnYxZwzsX5XO6jT0qXuqqmTbVx3Pv+B3HnRfL9kTFEt3/bM8v6OvKrmB0R2VxOZDJgdrm8bJwM5+y1XqqrZ2u5v19msySV6e5S2azzE+76da8xa/vzzkRqcqMtlzmfRxRBazV7NsIw7r7MQ0XKZPT06TafizsvilTqttxNY/xsiGN2jkAMJqVgLQOkFMcGIPI8GAMQlOTIAEyJBIyBc9CajSGlQDScqZW6FZFcLoMEJTxIiTjmICQl4fsjF2t80MjseSv5/psK0fCzMgAedZYBw/vo1vB/dR7rXBsrDzGPfTlxZby7hgPTjWoa/4itvKBVQBVQBVQBVUAVUAX0fwf9CY9+hvODk1XCAAAAAElFTkSuQmCC" alt="Limatco" style="height:46px;width:auto;border-radius:6px;"></div>
+  <div class="hdr-title">
+    <h1>Limatco S.A. — Gestión de Turnos 2026</h1>
+    <p>Bodega BLA · Julio – Diciembre 2026</p>
+  </div>
+  <div class="hdr-right" id="hdr-stats"></div>
+  <button class="btn btn-secondary btn-sm" onclick="resetToDefaults()" title="Restablecer datos" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:11px">↺ Reset</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard"><span class="tab-icon">🏠</span><span>Dashboard</span></div>
+  <div class="tab" data-tab="calendario"><span class="tab-icon">📅</span><span>Calendario</span></div>
+  <div class="tab" data-tab="quincenas"><span class="tab-icon">📋</span><span>Quincenas</span></div>
+  <div class="tab" data-tab="empleados"><span class="tab-icon">👥</span><span>Empleados</span></div>
+  <div class="tab" data-tab="reportes"><span class="tab-icon">📊</span><span>Reportes</span></div>
+</div>
+
+<div class="content">
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="panel active" id="panel-dashboard">
+  <div class="dash-today" id="dash-today-hdr"></div>
+  <div class="stat-row" id="dash-stats"></div>
+  <div class="dash-grid">
+    <div class="dash-section" id="dash-left"></div>
+    <div class="dash-section" id="dash-right"></div>
+  </div>
+  <div id="dash-absences"></div>
+</div>
+
+<!-- ══════════ CALENDARIO ══════════ -->
+<div class="panel" id="panel-calendario">
+  <div class="today-box" id="cal-today-box"></div>
+  <div class="cal-toolbar">
+    <button class="btn btn-secondary" id="btn-prev">◀</button>
+    <h2 id="month-title"></h2>
+    <button class="btn btn-secondary" id="btn-next">▶</button>
+    <select class="sel" id="cal-filter-shift" onchange="renderCalendar()">
+      <option value="">Todos los turnos</option>
+      <option value="FIJO">Turno Fijo</option>
+      <option value="ROT9">Rotativos</option>
+      <option value="A">Grupo A</option>
+      <option value="B">Grupo B</option>
+    </select>
+  </div>
+  <div class="legend">
+    <div class="li"><div class="ldot" style="background:#7c3aed"></div>Fijo 09:00</div>
+    <div class="li"><div class="ldot" style="background:#0891b2"></div>Rotativo 09↔10:30</div>
+    <div class="li"><div class="ldot" style="background:#059669"></div>Grupo A libre sáb</div>
+    <div class="li"><div class="ldot" style="background:#dc2626"></div>Grupo B libre sáb</div>
+    <div class="li"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0"></div>Tiene modificación</div>
+  </div>
+  <div class="cal-wrap">
+    <div class="cal-head"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+  <div class="day-panel" id="day-panel">
+    <div class="dp-head">
+      <h3 id="dp-title"></h3>
+      <button class="btn btn-warning btn-sm" onclick="openOverrideModal()">✏️ Editar este día</button>
+      <button class="btn btn-secondary btn-sm" onclick="closePanel()">✕ Cerrar</button>
+    </div>
+    <p id="dp-sublabel" style="font-size:12px;color:#64748b;margin-bottom:12px;"></p>
+    <div class="dp-grid" id="dp-body"></div>
+  </div>
+</div>
+
+<!-- ══════════ QUINCENAS ══════════ -->
+<div class="panel" id="panel-quincenas">
+  <div class="q-toolbar">
+    <h2>Quincenas — Julio a Diciembre 2026</h2>
+    <select class="sel" id="q-filter-month" onchange="renderQuincenas()">
+      <option value="">Todos los meses</option>
+      <option value="6">Julio</option><option value="7">Agosto</option>
+      <option value="8">Septiembre</option><option value="9">Octubre</option>
+      <option value="10">Noviembre</option><option value="11">Diciembre</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" onclick="qExpandAll()">Expandir todo</button>
+    <button class="btn btn-secondary btn-sm" onclick="qCollapseAll()">Colapsar todo</button>
+  </div>
+  <div id="q-cards"></div>
+</div>
+
+<!-- ══════════ EMPLEADOS ══════════ -->
+<div class="panel" id="panel-empleados">
+  <div class="stat-row" id="emp-stats"></div>
+  <div class="card">
+    <div class="emp-toolbar">
+      <input type="text" class="inp" id="emp-search" placeholder="🔍 Buscar nombre o cargo…" oninput="renderTable()" style="flex:1;min-width:180px">
+      <select class="sel" id="emp-filter-turno" onchange="renderTable()">
+        <option value="">Todos los turnos</option>
+        <option value="FIJO">Turno Fijo 09:00</option>
+        <option value="ROT9">Rotativo 09↔10:30</option>
+        <option value="A">Grupo A 10:30</option>
+        <option value="B">Grupo B 10:30</option>
+      </select>
+      <button class="btn btn-success" onclick="openEmpModal()">+ Agregar empleado</button>
+      <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Turno</th><th>Horario Sem.</th><th>Horario Sáb.</th><th>Sábado libre</th><th>Acciones</th></tr></thead>
+      <tbody id="emp-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ REPORTES ══════════ -->
+<div class="panel" id="panel-reportes">
+  <div class="rep-toolbar">
+    <div class="fg">
+      <label>Tipo de reporte</label>
+      <select class="sel" id="rep-type" onchange="renderReport()">
+        <option value="horario">Horario por quincena</option>
+        <option value="ausencias">Ausencias y modificaciones</option>
+        <option value="empleado">Por empleado</option>
+        <option value="sabados">Sábados libres</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Desde</label>
+      <input type="date" class="inp" id="rep-from" value="2026-07-01" onchange="renderReport()">
+    </div>
+    <div class="fg">
+      <label>Hasta</label>
+      <input type="date" class="inp" id="rep-to" value="2026-12-31" onchange="renderReport()">
+    </div>
+    <div class="fg">
+      <label>Turno</label>
+      <select class="sel" id="rep-shift" onchange="renderReport()">
+        <option value="">Todos</option>
+        <option value="FIJO">Fijo 09:00</option>
+        <option value="ROT9">Rotativo</option>
+        <option value="A">Grupo A</option>
+        <option value="B">Grupo B</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-top:auto">
+      <button class="btn btn-primary" onclick="downloadReport()">⬇ Descargar CSV</button>
+    </div>
+    <div class="fg" style="margin-top:auto">
+      <button class="btn btn-secondary" onclick="printReport()">🖨️ Imprimir</button>
+    </div>
+  </div>
+  <div class="rep-preview card" id="rep-preview"></div>
+</div>
+
+</div><!-- /content -->
+
+<!-- ══ MODAL: EMPLEADO ══ -->
+<div class="overlay" id="ov-emp">
+  <div class="modal modal-md">
+    <h3 id="emp-modal-title">Nuevo empleado</h3>
+    <div class="modal-info" id="emp-modal-info"></div>
+    <div class="fr"><label>Nombre completo</label><input type="text" id="f-nombre" placeholder="Ej: Juan Pérez"></div>
+    <div class="fr"><label>Cargo</label><input type="text" id="f-cargo" placeholder="Ej: Apoyo Despacho"></div>
+    <div class="fr">
+      <label>Tipo de turno</label>
+      <select id="f-turno" onchange="updateEmpInfo()">
+        <option value="FIJO">Turno Fijo · 09:00–17:30 (sin sábado libre)</option>
+        <option value="ROT9">Turno Rotativo · 09:00↔10:30 (alterna c/quincena)</option>
+        <option value="A">10:30–19:00 · Grupo A (sábado libre alterno)</option>
+        <option value="B">10:30–19:00 · Grupo B (sábado libre alterno)</option>
+      </select>
+    </div>
+    <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:8px;">Horario personalizado (opcional)</div>
+      <div class="fr-row">
+        <div class="fr"><label>Entrada Lun–Vie</label><input type="time" id="f-lv-in" placeholder="09:00"></div>
+        <div class="fr"><label>Salida Lun–Vie</label><input type="time" id="f-lv-out" placeholder="17:30"></div>
+      </div>
+      <div class="fr-row">
+        <div class="fr"><label>Entrada Sábado</label><input type="time" id="f-sat-in" placeholder="09:00"></div>
+        <div class="fr"><label>Salida Sábado</label><input type="time" id="f-sat-out" placeholder="13:30"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeEmpModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: EDITAR DÍA ══ -->
+<div class="overlay" id="ov-day">
+  <div class="modal modal-lg">
+    <h3 id="day-modal-title">Editar día</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px;">Marca ausencias, vacaciones, licencias o permisos para este día. Dejar en "Normal" para mantener el turno predeterminado.</p>
+    <div style="max-height:55vh;overflow-y:auto;">
+      <table class="ov-table" id="ov-table"></table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeOverrideModal()">Cancelar</button>
+      <button class="btn btn-warning" onclick="clearDayOverride()">Limpiar día</button>
+      <button class="btn btn-primary" onclick="saveDayOverride()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+let employees = [
+  {id:1,  nombre:'Marcelo Piñones',   cargo:'Enc. Operaciones',  turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:00'},
+  {id:2,  nombre:'Brayan Sevilla',    cargo:'Enc. de Valija',    turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:3,  nombre:'Sebastian Guevara', cargo:'Apoyo',             turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:4,  nombre:'James Jean',        cargo:'2° Sector A',       turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:5,  nombre:'Lisandro Maragaño', cargo:'Vigía',             turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:6,  nombre:'Marlon Otiniano',   cargo:'Apoyo Despacho',    turno:'FIJO', lvIn:'10:00',lvOut:'18:30',satIn:'09:30',satOut:'14:00'},
+  {id:7,  nombre:'Patricio Lienlaf',  cargo:'Operador de Grúa',  turno:'FIJO', lvIn:'09:00',lvOut:'17:00',satIn:'08:30',satOut:'13:00'},
+  {id:8,  nombre:'Victor Leiva',      cargo:'Operador de Grúa',  turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:9,  nombre:'Jesus Calderon',    cargo:'Enc. Sector A',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:10, nombre:'Amos Altema',       cargo:'Enc. Sector B',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:11, nombre:'Diumetre Clotaire', cargo:'Enc. Sector C',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:12, nombre:'Ricardo Rojas',     cargo:'Enc. Sector D',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:13, nombre:'Yosmic Pauldeux',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:14, nombre:'Dante Contreras',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:15, nombre:'Juan Rivera',       cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:16, nombre:'Felipe Palma',      cargo:'Apoyo Despacho',    turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:17, nombre:'Alberto Collao',    cargo:'Operador de Grúa',  turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:18, nombre:'Segundo Martinez',  cargo:'2° Sector D',       turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:19, nombre:'Juan Rojas',        cargo:'Apoyo Despacho',    turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:20, nombre:'Jose Vasquez',      cargo:'Acopios N°1-2',     turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:21, nombre:'Edgar Baldera',     cargo:'Apoyo 2° Sector A', turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:22, nombre:'Danilo Paredes',    cargo:'Operador de Grúa',  turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:23, nombre:'Bastian Carrasco',  cargo:'Despacho',          turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:24, nombre:'Anderson Polo',     cargo:'2° Sector C',       turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:25, nombre:'Gilmer Alvarez',    cargo:'2° Sector B',       turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:26, nombre:'Domingo Querales',  cargo:'Apoyo Despacho',    turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+];
+let nextId = 27, editingEmpId = null;
+
+// overrides[dateKey][empId] = {status:'normal'|'vacaciones'|'licencia'|'permiso'|'ausente', note:''}
+let overrides = {};
+
+// ══════════════════════════════════════════════
+// CORE LOGIC
+// ══════════════════════════════════════════════
+const Q_BASE    = new Date(2026,5,29);
+const SAT_ANCHOR = new Date(2026,6,4);
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+function quincenaOf(d){ return Math.floor(Math.round((d-Q_BASE)/864e5)/15)+1; }
+function freeGroupOnSat(d){ const i=Math.round((d-SAT_ANCHOR)/(7*864e5)); return i%2===0?'A':'B'; }
+function rot9On1030(q){ return q%2===0; }
+function rot9LibreOnSat(d){ return rot9On1030(quincenaOf(d)); }
+function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function fmtDate(d){ return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; }
+function todayDate(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+
+function getOverride(date, empId){
+  const k=dateKey(date);
+  return overrides[k]?.[empId]||null;
+}
+function isAbsent(date, empId){
+  const ov=getOverride(date,empId);
+  return ov && ov.status!=='normal';
+}
+function dayHasOverrides(date){
+  const k=dateKey(date);
+  if(!overrides[k]) return false;
+  return Object.values(overrides[k]).some(v=>v.status!=='normal');
+}
+function statusLabel(s){
+  const m={vacaciones:'Vacaciones',licencia:'Licencia Médica',permiso:'Permiso',ausente:'Ausente',normal:'Normal'};
+  return m[s]||s;
+}
+function statusBadge(s){
+  if(s==='vacaciones') return '<span class="vacation-badge">Vacaciones</span>';
+  if(s==='licencia')   return '<span class="license-badge">Licencia</span>';
+  if(s==='permiso')    return '<span class="permission-badge">Permiso</span>';
+  if(s==='ausente')    return '<span class="absent-badge">Ausente</span>';
+  return '';
+}
+
+// Get effective groups for a day
+function getGroups(date){
+  const q=quincenaOf(date), isSat=date.getDay()===6;
+  const r9on10=rot9On1030(q), r9libre=isSat&&rot9LibreOnSat(date);
+  const fg=isSat?freeGroupOnSat(date):null, wg=fg==='A'?'B':'A';
+  const g09=[], g10=[], gLibre=[];
+  employees.forEach(e=>{
+    if(isAbsent(date,e.id)) return;
+    if(isSat){
+      if(e.turno==='FIJO'||(!r9libre&&e.turno==='ROT9')) g09.push(e);
+      else if(r9libre&&e.turno==='ROT9') gLibre.push(e);
+      else if(e.turno===fg) gLibre.push(e);
+      else if(e.turno===wg) g10.push(e);
+    } else {
+      if(e.turno==='FIJO'||(e.turno==='ROT9'&&!r9on10)) g09.push(e);
+      else g10.push(e);
+    }
+  });
+  return {g09,g10,gLibre,q,r9on10,r9libre,fg,wg};
+}
+
+function getAbsentToday(date){
+  const k=dateKey(date);
+  if(!overrides[k]) return [];
+  return employees.filter(e=>overrides[k][e.id]&&overrides[k][e.id].status!=='normal')
+    .map(e=>({...e,ovStatus:overrides[k][e.id].status,ovNote:overrides[k][e.id].note}));
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+    if(t.dataset.tab==='dashboard') renderDashboard();
+    if(t.dataset.tab==='quincenas') renderQuincenas();
+    if(t.dataset.tab==='empleados'){renderTable();renderEmpStats();}
+    if(t.dataset.tab==='reportes') renderReport();
+  });
+});
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard(){
+  const today=todayDate();
+  const {g09,g10,gLibre,q,r9on10}=getGroups(today);
+  const absents=getAbsentToday(today);
+  const isSat=today.getDay()===6, isSun=today.getDay()===0;
+  const isWork=!isSun;
+
+  // Header
+  document.getElementById('dash-today-hdr').innerHTML=`
+    <h2>Hoy es ${DAYS[today.getDay()]} ${today.getDate()} de ${MONTHS[today.getMonth()]} ${today.getFullYear()}</h2>
+    <p>Quincena N° ${q} · Rotativos en turno <strong>${r9on10?'10:30–19:00':'09:00–17:30'}</strong>${isSat?' · Día sábado':isSun?' · Domingo (no laborable)':''}</p>`;
+
+  // Stats
+  const totalWork=g09.length+g10.length+(isSat?0:0);
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="sc blue"><div class="sc-num">${employees.length}</div><div class="sc-label">Total empleados</div></div>
+    <div class="sc green"><div class="sc-num">${isWork?(g09.length+g10.length+(isSat?gLibre.length:0)):0}</div><div class="sc-label">Presentes hoy</div></div>
+    <div class="sc amber"><div class="sc-num">${isSat?gLibre.length:0}</div><div class="sc-label">Sáb. libre hoy</div></div>
+    <div class="sc red"><div class="sc-num">${absents.length}</div><div class="sc-label">Ausencias registradas</div></div>
+    <div class="sc purple"><div class="sc-num">${employees.filter(e=>e.turno==='A'||e.turno==='B').length}</div><div class="sc-label">Con beneficio sáb.</div></div>
+    <div class="sc cyan"><div class="sc-num">${employees.filter(e=>e.turno==='ROT9').length}</div><div class="sc-label">Turno rotativo</div></div>`;
+
+  // Left column — today's shifts
+  const empRows=(arr)=>arr.map(e=>{
+    const ov=getOverride(today,e.id);
+    const badge=ov&&ov.status!=='normal'?statusBadge(ov.status):'';
+    const dot=`<span class="dot dot-${e.turno==='ROT9'?'rot9':e.turno==='FIJO'?'fijo':'a'?'a':'b'}"></span>`;
+    return `<div class="emp-row">${dot}<span>${e.nombre}</span><span style="font-size:11px;color:#94a3b8">${e.cargo}</span>${badge}</div>`;
+  }).join('');
+
+  // Fix the dot selector
+  const empRowsFixed=(arr)=>arr.map(e=>{
+    const ov=getOverride(today,e.id);
+    const badge=ov&&ov.status!=='normal'?statusBadge(ov.status):'';
+    const dotColor={FIJO:'#7c3aed',ROT9:'#0891b2',A:'#059669',B:'#dc2626'}[e.turno]||'#94a3b8';
+    return `<div class="emp-row"><div class="dot" style="background:${dotColor}"></div><span style="flex:1">${e.nombre}</span><span style="font-size:10px;color:#94a3b8">${e.cargo}</span>${badge}</div>`;
+  }).join('');
+
+  let leftHTML='';
+  if(isSun){ leftHTML='<div class="shift-block"><p style="color:#94a3b8;text-align:center;padding:20px">Domingo — día no laborable</p></div>'; }
+  else{
+    if(g09.length) leftHTML+=`<div class="shift-block shift-09"><h4>Turno 09:00–17:30 (${g09.length} personas)</h4>${empRowsFixed(g09)}</div>`;
+    if(g10.length) leftHTML+=`<div class="shift-block shift-10"><h4>Turno 10:30–19:00 (${g10.length} personas)</h4>${empRowsFixed(g10)}</div>`;
+    if(isSat&&gLibre.length) leftHTML+=`<div class="shift-block shift-libre"><h4>🎉 Sábado libre (${gLibre.length} personas)</h4>${empRowsFixed(gLibre)}</div>`;
+  }
+  document.getElementById('dash-left').innerHTML=leftHTML;
+
+  // Right column — next free Saturdays
+  let nextSats='<div class="shift-block"><div class="card-title">Próximos Sábados Libres</div>';
+  let d=new Date(today); if(d.getDay()!==6) while(d.getDay()!==6) d.setDate(d.getDate()+1);
+  for(let i=0;i<8;i++){
+    if(d>new Date(2026,11,31)) break;
+    const fg=freeGroupOnSat(d), r9l=rot9LibreOnSat(d);
+    const r9Count=employees.filter(e=>e.turno==='ROT9').length;
+    const libreCount=employees.filter(e=>e.turno===fg).length+(r9l?r9Count:0);
+    nextSats+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+      <span style="font-weight:700">${fmtDate(d)}</span>
+      <span style="color:#065f46;font-weight:700">Libre: Grupo ${fg}${r9l?' + Rot.':''} (${libreCount})</span>
+    </div>`;
+    d=new Date(d); d.setDate(d.getDate()+7);
+  }
+  nextSats+='</div>';
+  document.getElementById('dash-right').innerHTML=nextSats;
+
+  // Absences section
+  let absHTML='';
+  if(absents.length){
+    absHTML=`<div class="card card-body" style="margin-top:12px"><div class="card-title">⚠️ Ausencias registradas hoy</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${absents.map(e=>`<div style="background:#fff8f8;border:1px solid #fee2e2;border-radius:8px;padding:8px 12px;font-size:12px">
+          <strong>${e.nombre}</strong> — ${statusLabel(e.ovStatus)}${e.ovNote?` (${e.ovNote})`:''}
+        </div>`).join('')}
+      </div></div>`;
+  }
+
+  // All overrides (not just today)
+  const allOverrideDates=Object.keys(overrides).filter(k=>{
+    return Object.values(overrides[k]).some(v=>v.status!=='normal');
+  }).sort();
+  if(allOverrideDates.length>0){
+    absHTML+=`<div class="card card-body" style="margin-top:12px"><div class="card-title">📋 Todas las ausencias registradas</div>
+      <table class="rep-table">
+        <thead><tr><th>Fecha</th><th>Empleado</th><th>Motivo</th><th>Nota</th></tr></thead>
+        <tbody>${allOverrideDates.flatMap(k=>{
+          const dp=new Date(k+'T00:00:00');
+          return Object.entries(overrides[k]).filter(([,v])=>v.status!=='normal').map(([eid,v])=>{
+            const e=employees.find(x=>x.id===parseInt(eid));
+            return `<tr><td>${fmtDate(dp)}</td><td>${e?e.nombre:'?'}</td><td>${statusLabel(v.status)}</td><td style="color:#64748b">${v.note||'—'}</td></tr>`;
+          });
+        }).join('')}</tbody>
+      </table></div>`;
+  }
+  document.getElementById('dash-absences').innerHTML=absHTML;
+}
+
+// ══════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════
+let calMonth=6, calYear=2026, selectedDate=null;
+
+function renderCalTodayBox(){
+  const t=todayDate();
+  const {g09,g10,gLibre,q}=getGroups(t);
+  const absents=getAbsentToday(t);
+  const isSat=t.getDay()===6;
+  document.getElementById('cal-today-box').innerHTML=`
+    <div class="tb-date">${DAYS[t.getDay()]} ${t.getDate()} de ${MONTHS[t.getMonth()]} — Q${q}</div>
+    <div class="tb-pills">
+      <span class="tb-pill" style="background:#ede9fe;color:#5b21b6">🟣 09:00 → ${g09.length} pers.</span>
+      <span class="tb-pill" style="background:#ecfeff;color:#155e75">🔵 10:30 → ${g10.length} pers.</span>
+      ${isSat&&gLibre.length?`<span class="tb-pill" style="background:#d1fae5;color:#065f46">🎉 Libre → ${gLibre.length} pers.</span>`:''}
+      ${absents.length?`<span class="tb-pill" style="background:#fee2e2;color:#991b1b">⚠️ Ausentes: ${absents.length}</span>`:''}
+    </div>
+    <button class="btn btn-warning btn-sm" style="margin-left:auto" onclick="openOverrideForDate(todayDate())">✏️ Editar hoy</button>`;
+}
+
+document.getElementById('btn-prev').addEventListener('click',()=>{
+  if(calMonth===6&&calYear===2026) return;
+  calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar();
+});
+document.getElementById('btn-next').addEventListener('click',()=>{
+  if(calMonth===11&&calYear===2026) return;
+  calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar();
+});
+
+function renderCalendar(){
+  document.getElementById('month-title').textContent=`${MONTHS[calMonth].toUpperCase()} ${calYear}`;
+  const filterShift=document.getElementById('cal-filter-shift').value;
+  const today=todayDate();
+  const first=new Date(calYear,calMonth,1), last=new Date(calYear,calMonth+1,0);
+  const rangeS=new Date(2026,6,1), rangeE=new Date(2026,11,31);
+  let dow=first.getDay(); dow=dow===0?6:dow-1;
+  let html='';
+  for(let i=0;i<dow;i++) html+='<div class="cc empty"></div>';
+
+  for(let d=1;d<=last.getDate();d++){
+    const date=new Date(calYear,calMonth,d);
+    const dw=date.getDay(), isSat=dw===6, isSun=dw===0;
+    const isToday=date.getTime()===today.getTime();
+    const inRange=date>=rangeS&&date<=rangeE;
+    const isSelected=selectedDate&&selectedDate.getTime()===date.getTime();
+    const hasOv=dayHasOverrides(date);
+
+    let cls='cc';
+    if(isSat) cls+=' is-sat'; if(isSun) cls+=' is-sun';
+    if(!isSun&&inRange) cls+=' is-work';
+    if(isToday) cls+=' is-today-cell';
+    if(!inRange) cls+=' out-range';
+    if(isSelected) cls+=' selected';
+    if(hasOv) cls+=' has-override';
+
+    const dnHtml=isToday
+      ?`<div class="dn"><div style="background:#D82D33;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">${d}</div></div>`
+      :`<div class="dn">${d}</div>`;
+
+    let content='';
+    if(inRange&&!isSun){
+      const q=quincenaOf(date); const r9on10=rot9On1030(q);
+      if(isSat){
+        const fg=freeGroupOnSat(date), r9l=rot9LibreOnSat(date);
+        if(!filterShift||filterShift===fg||filterShift==='ROT9'||filterShift==='FIJO'){
+          content=`<div class="cc-content">
+            <span class="cpill cpill-q">Q${q}</span>
+            ${!filterShift||filterShift===fg?`<span class="cpill cpill-sat-${fg==='A'?'a':'b'}">🟢 Libre: Gpo ${fg}</span>`:''}
+            ${!filterShift||filterShift==='ROT9'?`<span class="cpill ${r9l?'cpill-rot-libre':'cpill-rot-work'}">${r9l?'🔵 Rot.libre':'🟣 Rot.trabaja'}</span>`:''}
+            ${!filterShift||filterShift==='FIJO'?`<span class="cpill cpill-fijo">⚪ Fijo trabaja</span>`:''}
+          </div>`;
+        }
+      } else {
+        const empF=filterShift?employees.filter(e=>e.turno===filterShift):null;
+        const g09cnt=employees.filter(e=>e.turno==='FIJO'||(e.turno==='ROT9'&&!r9on10)).length;
+        const g10cnt=employees.filter(e=>e.turno==='A'||e.turno==='B'||(e.turno==='ROT9'&&r9on10)).length;
+        if(!filterShift){
+          content=`<div class="cc-content">
+            <span class="cpill cpill-q">Q${q}</span>
+            <span class="cpill cpill-09">09:00 · ${g09cnt} pers.</span>
+            <span class="cpill cpill-10">10:30 · ${g10cnt} pers.</span>
+          </div>`;
+        } else {
+          const shown=empF?empF.slice(0,2).map(e=>e.nombre.split(' ')[0]).join(', '):'';
+          const extra=empF&&empF.length>2?` +${empF.length-2}`:'';
+          content=`<div class="cc-content">
+            <span class="cpill cpill-q">Q${q}</span>
+            <span class="cpill cpill-09" style="font-size:9px">${shown}${extra}</span>
+          </div>`;
+        }
+      }
+    }
+
+    const onclick=inRange&&!isSun?`onclick="showDayDetail(new Date(${calYear},${calMonth},${d}))"` :'';
+    html+=`<div class="${cls}" ${onclick}>${dnHtml}${content}</div>`;
+  }
+  const filled=dow+last.getDate();
+  const rem=filled%7===0?0:7-(filled%7);
+  for(let i=0;i<rem;i++) html+='<div class="cc empty"></div>';
+  document.getElementById('cal-grid').innerHTML=html;
+}
+
+let currentDayDate=null;
+function showDayDetail(date){
+  currentDayDate=date; selectedDate=date; renderCalendar();
+  const q=quincenaOf(date), isSat=date.getDay()===6;
+  const r9on10=rot9On1030(q), r9l=isSat&&rot9LibreOnSat(date);
+  const fg=isSat?freeGroupOnSat(date):null, wg=fg==='A'?'B':'A';
+  const absents=getAbsentToday(date);
+
+  document.getElementById('dp-title').textContent=`${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  const r9lbl=r9on10?'Rotativo en turno 10:30':'Rotativo en turno 09:00';
+  document.getElementById('dp-sublabel').textContent=`Quincena N° ${q} · ${r9lbl}${isSat?` · Grupo ${fg} tiene sábado libre`:''}`;
+
+  const fijos=employees.filter(e=>e.turno==='FIJO');
+  const rot9=employees.filter(e=>e.turno==='ROT9');
+  const grpA=employees.filter(e=>e.turno==='A');
+  const grpB=employees.filter(e=>e.turno==='B');
+
+  const chip=(e,cls)=>{
+    const ov=getOverride(date,e.id);
+    const ab=ov&&ov.status!=='normal';
+    const badge=ab?statusBadge(ov.status):'';
+    const chipCls=ab?'dpc-absent':cls;
+    return `<span class="dp-chip ${chipCls}" title="${e.cargo}${ab?' — '+statusLabel(ov.status):''}">${e.nombre}${badge}</span>`;
+  };
+
+  let body='';
+  if(isSat){
+    const libreG=employees.filter(e=>e.turno===fg);
+    const workG=employees.filter(e=>e.turno===wg);
+    const workCnt=fijos.length+(r9l?0:rot9.length)+workG.length;
+    const libreCnt=libreG.length+(r9l?rot9.length:0);
+    let w=`<div class="sublbl">Turno Fijo · ${fijos[0]?.satIn||'09:00'}–${fijos[0]?.satOut||'13:30'}</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
+    if(!r9l) w+=`<div class="sublbl">Rotativo (Q${q} en 09:00) · 09:00–13:30</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
+    w+=`<div class="sublbl">Grupo ${wg} · 10:30–19:00 · Sáb 09:30–14:00</div><div class="dp-chips">${workG.map(e=>chip(e,'dpc-b')).join('')}</div>`;
+    let l=`<div class="sublbl">Grupo ${fg} · Sábado LIBRE</div><div class="dp-chips">${libreG.map(e=>chip(e,'dpc-a')).join('')}</div>`;
+    if(r9l) l+=`<div class="sublbl">Rotativo (Q${q} en 10:30) — sábado libre</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
+    body=`<div class="dp-section work09"><h4>⚙️ Trabajan (${workCnt})</h4>${w}</div><div class="dp-section libre"><h4>🎉 Libre (${libreCnt})</h4>${l}</div>`;
+  } else {
+    const g09=[...fijos,...(r9on10?[]:rot9)];
+    const g10=[...(r9on10?rot9:[]),...grpA,...grpB];
+    let h09=`<div class="sublbl">Turno Fijo · 09:00–17:30</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
+    if(!r9on10) h09+=`<div class="sublbl">Rotativo (Q${q} en 09:00) · 09:00–17:30</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
+    let h10='';
+    if(r9on10) h10+=`<div class="sublbl">Rotativo (Q${q} en 10:30) · 10:30–19:00</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
+    h10+=`<div class="sublbl">Grupo A · 10:30–19:00</div><div class="dp-chips">${grpA.map(e=>chip(e,'dpc-a')).join('')}</div>`;
+    h10+=`<div class="sublbl">Grupo B · 10:30–19:00</div><div class="dp-chips">${grpB.map(e=>chip(e,'dpc-b')).join('')}</div>`;
+    body=`<div class="dp-section work09"><h4>🟣 09:00–17:30 (${g09.length})</h4>${h09}</div><div class="dp-section work10"><h4>🔵 10:30–19:00 (${g10.length})</h4>${h10}</div>`;
+  }
+  document.getElementById('dp-body').innerHTML=body;
+  document.getElementById('day-panel').classList.add('open');
+  document.getElementById('day-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closePanel(){ document.getElementById('day-panel').classList.remove('open'); selectedDate=null; renderCalendar(); }
+
+// ══════════════════════════════════════════════
+// OVERRIDE MODAL
+// ══════════════════════════════════════════════
+let overrideDate=null, tempOverrides={};
+
+function openOverrideModal(){ openOverrideForDate(currentDayDate); }
+function openOverrideForDate(date){
+  overrideDate=date;
+  const k=dateKey(date);
+  tempOverrides=JSON.parse(JSON.stringify(overrides[k]||{}));
+  document.getElementById('day-modal-title').textContent=`Editar: ${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+
+  const groups=[
+    {label:'Turno Fijo 09:00',emps:employees.filter(e=>e.turno==='FIJO')},
+    {label:'Turno Rotativo',emps:employees.filter(e=>e.turno==='ROT9')},
+    {label:'Grupo A · 10:30',emps:employees.filter(e=>e.turno==='A')},
+    {label:'Grupo B · 10:30',emps:employees.filter(e=>e.turno==='B')},
+  ];
+
+  let html='<thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th><th>Nota</th></tr></thead><tbody>';
+  groups.forEach(g=>{
+    html+=`<tr><td colspan="4" class="ov-group-head">${g.label}</td></tr>`;
+    g.emps.forEach(e=>{
+      const ov=tempOverrides[e.id]||{status:'normal',note:''};
+      html+=`<tr>
+        <td style="font-weight:600">${e.nombre}</td>
+        <td style="color:#64748b;font-size:11px">${e.cargo}</td>
+        <td><select class="ov-status-sel" data-id="${e.id}" onchange="tempOverrides[${e.id}]=tempOverrides[${e.id}]||{}; tempOverrides[${e.id}].status=this.value">
+          <option value="normal" ${ov.status==='normal'?'selected':''}>Normal</option>
+          <option value="vacaciones" ${ov.status==='vacaciones'?'selected':''}>Vacaciones</option>
+          <option value="licencia" ${ov.status==='licencia'?'selected':''}>Licencia Médica</option>
+          <option value="permiso" ${ov.status==='permiso'?'selected':''}>Permiso</option>
+          <option value="ausente" ${ov.status==='ausente'?'selected':''}>Ausente</option>
+        </select></td>
+        <td><input type="text" value="${ov.note||''}" placeholder="Opcional…" oninput="tempOverrides[${e.id}]=tempOverrides[${e.id}]||{}; tempOverrides[${e.id}].note=this.value"></td>
+      </tr>`;
+    });
+  });
+  html+='</tbody>';
+  document.getElementById('ov-table').innerHTML=html;
+  document.getElementById('ov-day').classList.add('open');
+}
+function closeOverrideModal(){ document.getElementById('ov-day').classList.remove('open'); }
+function saveDayOverride(){
+  const k=dateKey(overrideDate);
+  overrides[k]=JSON.parse(JSON.stringify(tempOverrides));
+  closeOverrideModal();
+  renderCalendar(); renderCalTodayBox();
+  if(currentDayDate&&currentDayDate.getTime()===overrideDate.getTime()) showDayDetail(overrideDate);
+  renderDashboardIfActive(); scheduleSave();
+}
+function clearDayOverride(){
+  const k=dateKey(overrideDate);
+  delete overrides[k]; tempOverrides={};
+  closeOverrideModal(); renderCalendar(); renderCalTodayBox(); renderDashboardIfActive(); scheduleSave();
+}
+function renderDashboardIfActive(){
+  if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard();
+}
+
+// ══════════════════════════════════════════════
+// QUINCENAS
+// ══════════════════════════════════════════════
+function getQuincenas(){
+  const end=new Date(2026,11,31); const qs=[]; let q=1;
+  while(true){
+    const s=new Date(Q_BASE.getTime()+(q-1)*15*864e5);
+    if(s>end) break;
+    const e=new Date(s.getTime()+14*864e5), ae=e>end?end:e;
+    const sats=[]; for(let d=new Date(s);d<=ae;d.setDate(d.getDate()+1)) if(d.getDay()===6) sats.push(new Date(d));
+    qs.push({num:q,start:s,end:ae,saturdays:sats}); q++;
+  }
+  return qs;
+}
+
+function renderQuincenas(){
+  const filterMonth=document.getElementById('q-filter-month').value;
+  const qs=getQuincenas();
+  let html='';
+  qs.forEach(q=>{
+    if(filterMonth&&q.start.getMonth()!==parseInt(filterMonth)&&q.end.getMonth()!==parseInt(filterMonth)) return;
+    const fijos=employees.filter(e=>e.turno==='FIJO');
+    const rot9=employees.filter(e=>e.turno==='ROT9');
+    const grpA=employees.filter(e=>e.turno==='A');
+    const grpB=employees.filter(e=>e.turno==='B');
+    const r9on10=rot9On1030(q.num);
+
+    let satHTML='';
+    q.saturdays.forEach(s=>{
+      const fg=freeGroupOnSat(s), wg=fg==='A'?'B':'A';
+      const r9l=rot9LibreOnSat(s);
+      const freeG=employees.filter(e=>e.turno===fg);
+      const workG=employees.filter(e=>e.turno===wg);
+      satHTML+=`<div class="sat-row">
+        <div class="sr-date">📅 Sábado ${fmtDate(s)}</div>
+        <div><span class="sr-badge srb-libre">🟢 LIBRE · Gpo ${fg}</span><span style="font-size:11px;color:#065f46">${freeG.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
+        ${r9l?`<div><span class="sr-badge srb-rot">🔵 LIBRE · Rot.</span><span style="font-size:11px;color:#155e75">${rot9.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>`:''}
+        <div><span class="sr-badge srb-work">🔴 TRABAJA · Gpo ${wg}</span><span style="font-size:11px;color:#991b1b">09:30–14:00</span></div>
+      </div>`;
+    });
+
+    html+=`<div class="qc">
+      <div class="qc-head" onclick="toggleQ(this)">
+        <div>
+          <h3>Quincena N° ${q.num} &nbsp;<span style="font-size:11px;padding:2px 7px;border-radius:4px;${r9on10?'background:#cffafe;color:#155e75':'background:#ede9fe;color:#5b21b6'}">Rot. → ${r9on10?'10:30':'09:00'}</span></h3>
+          <div class="sub">${fmtDate(q.start)} — ${fmtDate(q.end)} · ${q.saturdays.length} sábado(s)</div>
+        </div>
+        <div class="q-toggle">▼</div>
+      </div>
+      <div class="qc-body">
+        <div class="qg">
+          <h4>Turno Fijo 09:00</h4>
+          <span class="qg-badge b09">09:00–17:30 · Sáb 09:00–13:30</span>
+          <ul>${fijos.map(e=>`<li class="li-fijo">${e.nombre}</li>`).join('')}</ul>
+        </div>
+        <div class="qg">
+          <h4>Turno Rotativo</h4>
+          <span class="qg-badge ${r9on10?'b10':'b09'}">${r9on10?'10:30–19:00 · Sáb LIBRE':'09:00–17:30 · Sáb 09:00–13:30'}</span>
+          <ul>${rot9.map(e=>`<li class="${r9on10?'li-r9l':'li-r9w'}">${e.nombre}</li>`).join('')}</ul>
+        </div>
+        <div class="qg">
+          <h4>Grupos A y B · 10:30</h4>
+          <span class="qg-badge b10">10:30–19:00 · Sáb rotativo</span>
+          ${satHTML||'<div style="color:#94a3b8;font-size:12px;margin-top:8px">Sin sábados en este período</div>'}
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('q-cards').innerHTML=html||'<div style="text-align:center;color:#94a3b8;padding:40px">Sin quincenas para el filtro seleccionado</div>';
+}
+function toggleQ(h){ h.classList.toggle('open'); h.nextElementSibling.classList.toggle('open'); }
+function qExpandAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.classList.add('open');h.nextElementSibling.classList.add('open');}); }
+function qCollapseAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.classList.remove('open');h.nextElementSibling.classList.remove('open');}); }
+
+// ══════════════════════════════════════════════
+// EMPLOYEES
+// ══════════════════════════════════════════════
+const TLABEL={FIJO:'Fijo 09:00',ROT9:'Rot. 09↔10:30',A:'10:30 · Gpo A',B:'10:30 · Gpo B'};
+const TLIBRE={FIJO:'❌ No aplica',ROT9:'✅ En Q par (10:30)',A:'✅ Alterno · Gpo A',B:'✅ Alterno · Gpo B'};
+
+function renderTable(){
+  const search=document.getElementById('emp-search').value.toLowerCase();
+  const ft=document.getElementById('emp-filter-turno').value;
+  const list=employees.filter(e=>(!ft||e.turno===ft)&&(e.nombre.toLowerCase().includes(search)||e.cargo.toLowerCase().includes(search)));
+  document.getElementById('emp-tbody').innerHTML=list.length
+    ?list.map((e,i)=>`<tr>
+      <td style="color:#94a3b8">${i+1}</td>
+      <td style="font-weight:700">${e.nombre}</td>
+      <td style="color:#64748b;font-size:12px">${e.cargo}</td>
+      <td><span class="tb tb-${e.turno}">${TLABEL[e.turno]}</span></td>
+      <td style="font-size:12px;color:#64748b">${e.lvIn||'—'} – ${e.lvOut||'—'}</td>
+      <td style="font-size:12px;color:#64748b">${e.satIn||'—'} – ${e.satOut||'—'}</td>
+      <td style="font-size:12px">${TLIBRE[e.turno]}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openEmpModal(${e.id})" style="margin-right:3px">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmp(${e.id})">🗑️</button>
+      </td>
+    </tr>`).join('')
+    :'<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:30px">Sin resultados</td></tr>';
+}
+
+function renderEmpStats(){
+  const c={FIJO:0,ROT9:0,A:0,B:0}; employees.forEach(e=>c[e.turno]++);
+  document.getElementById('emp-stats').innerHTML=`
+    <div class="sc purple"><div class="sc-num">${c.FIJO}</div><div class="sc-label">Fijo 09:00</div></div>
+    <div class="sc cyan"><div class="sc-num">${c.ROT9}</div><div class="sc-label">Rotativo</div></div>
+    <div class="sc green"><div class="sc-num">${c.A}</div><div class="sc-label">Grupo A 10:30</div></div>
+    <div class="sc red"><div class="sc-num">${c.B}</div><div class="sc-label">Grupo B 10:30</div></div>
+    <div class="sc blue"><div class="sc-num">${employees.length}</div><div class="sc-label">Total empleados</div></div>`;
+  document.getElementById('hdr-stats').innerHTML=`
+    <div class="hdr-stat"><span>${employees.length}</span><small>Empleados</small></div>
+    <div class="hdr-stat"><span>${c.A+c.B+c.ROT9}</span><small>Con sáb. libre</small></div>`;
+}
+
+const EMP_INFO={
+  FIJO:'Turno fijo: lunes–sábado. Sin sábado libre. Al pasar a 10:30 tendrá el beneficio.',
+  ROT9:'Alterna c/quincena: Q impar → 09:00–17:30 (trabaja sáb.) · Q par → 10:30–19:00 (sáb. libre).',
+  A:'Turno 10:30. Sábado libre alternado — libre en sábados pares: 04/07, 18/07, 01/08…',
+  B:'Turno 10:30. Sábado libre alternado — libre en sábados impares: 11/07, 25/07, 08/08…',
+};
+function updateEmpInfo(){ document.getElementById('emp-modal-info').textContent=EMP_INFO[document.getElementById('f-turno').value]||''; }
+
+function openEmpModal(id=null){
+  editingEmpId=id;
+  document.getElementById('emp-modal-title').textContent=id?'Editar empleado':'Nuevo empleado';
+  if(id){
+    const e=employees.find(x=>x.id===id);
+    document.getElementById('f-nombre').value=e.nombre;
+    document.getElementById('f-cargo').value=e.cargo;
+    document.getElementById('f-turno').value=e.turno;
+    document.getElementById('f-lv-in').value=e.lvIn||'';
+    document.getElementById('f-lv-out').value=e.lvOut||'';
+    document.getElementById('f-sat-in').value=e.satIn||'';
+    document.getElementById('f-sat-out').value=e.satOut||'';
+  } else {
+    document.getElementById('f-nombre').value='';
+    document.getElementById('f-cargo').value='';
+    document.getElementById('f-turno').value='FIJO';
+    document.getElementById('f-lv-in').value='09:00';
+    document.getElementById('f-lv-out').value='17:30';
+    document.getElementById('f-sat-in').value='09:00';
+    document.getElementById('f-sat-out').value='13:30';
+  }
+  updateEmpInfo();
+  document.getElementById('ov-emp').classList.add('open');
+}
+function closeEmpModal(){ document.getElementById('ov-emp').classList.remove('open'); }
+function saveEmployee(){
+  const nombre=document.getElementById('f-nombre').value.trim();
+  if(!nombre){alert('Ingresa el nombre');return;}
+  const data={
+    nombre,cargo:document.getElementById('f-cargo').value.trim(),
+    turno:document.getElementById('f-turno').value,
+    lvIn:document.getElementById('f-lv-in').value||'09:00',
+    lvOut:document.getElementById('f-lv-out').value||'17:30',
+    satIn:document.getElementById('f-sat-in').value||'09:00',
+    satOut:document.getElementById('f-sat-out').value||'13:30',
+  };
+  if(editingEmpId){ Object.assign(employees.find(e=>e.id===editingEmpId),data); }
+  else { employees.push({id:nextId++,...data}); }
+  closeEmpModal(); renderTable(); renderEmpStats(); scheduleSave();
+}
+function deleteEmp(id){
+  const e=employees.find(x=>x.id===id);
+  if(!e||!confirm(`¿Eliminar a ${e.nombre}?`)) return;
+  employees=employees.filter(x=>x.id!==id); renderTable(); renderEmpStats(); scheduleSave();
+}
+
+// ══════════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════════
+function renderReport(){
+  const type=document.getElementById('rep-type').value;
+  const from=new Date(document.getElementById('rep-from').value+'T00:00:00');
+  const to=new Date(document.getElementById('rep-to').value+'T00:00:00');
+  const shift=document.getElementById('rep-shift').value;
+  const empList=shift?employees.filter(e=>e.turno===shift):employees;
+
+  let title='',thead='',rows=[];
+
+  if(type==='horario'){
+    title='Horario por Quincena';
+    thead='<tr><th>Quincena</th><th>Período</th><th>Turno Rotativos</th><th>Fijo 09:00</th><th>Rot. 09:00</th><th>10:30 Sáb Libre</th><th>Sábados</th></tr>';
+    getQuincenas().forEach(q=>{
+      if(q.start>to||q.end<from) return;
+      const r9=rot9On1030(q.num);
+      const satInfo=q.saturdays.map(s=>`${fmtDate(s)}: Libre Gpo ${freeGroupOnSat(s)}${rot9LibreOnSat(s)?'+Rot':''}`).join(' | ');
+      rows.push(`<tr><td>Q${q.num}</td><td>${fmtDate(q.start)} – ${fmtDate(q.end)}</td><td>${r9?'10:30–19:00':'09:00–17:30'}</td><td>09:00–17:30 / Sáb 09:00–13:30</td><td>${r9?'10:30–19:00':'09:00–17:30'}</td><td>10:30–19:00 / Sáb LIBRE alterno</td><td>${satInfo||'—'}</td></tr>`);
+    });
+  } else if(type==='ausencias'){
+    title='Ausencias y Modificaciones';
+    thead='<tr><th>Fecha</th><th>Día</th><th>Empleado</th><th>Cargo</th><th>Turno</th><th>Motivo</th><th>Nota</th></tr>';
+    Object.keys(overrides).sort().forEach(k=>{
+      const d=new Date(k+'T00:00:00');
+      if(d<from||d>to) return;
+      Object.entries(overrides[k]).forEach(([eid,v])=>{
+        if(v.status==='normal') return;
+        const e=employees.find(x=>x.id===parseInt(eid));
+        if(!e||shift&&e.turno!==shift) return;
+        rows.push(`<tr><td>${fmtDate(d)}</td><td>${DAYS[d.getDay()]}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}</td><td>${statusLabel(v.status)}</td><td>${v.note||'—'}</td></tr>`);
+      });
+    });
+    if(!rows.length) rows.push('<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">Sin ausencias registradas en el período</td></tr>');
+  } else if(type==='empleado'){
+    title='Detalle por Empleado';
+    thead='<tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Turno</th><th>Horario Lun–Vie</th><th>Horario Sábado</th><th>Sábado libre</th><th>Ausencias</th></tr>';
+    empList.forEach((e,i)=>{
+      const absCnt=Object.values(overrides).reduce((sum,dov)=>{
+        const k2=dov[e.id]; return sum+(k2&&k2.status!=='normal'?1:0);
+      },0);
+      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${TLIBRE[e.turno]}</td><td>${absCnt||'—'}</td></tr>`);
+    });
+  } else if(type==='sabados'){
+    title='Calendario de Sábados Libres';
+    thead='<tr><th>Fecha Sábado</th><th>Quincena</th><th>Grupo libre</th><th>Personas libres</th><th>Rotativos</th></tr>';
+    let d=new Date(2026,6,4);
+    while(d<=new Date(2026,11,31)){
+      if(d>=from&&d<=to){
+        const fg=freeGroupOnSat(d), q=quincenaOf(d), r9l=rot9LibreOnSat(d);
+        const freeG=employees.filter(e=>e.turno===fg&&(!shift||e.turno===shift));
+        const rot9=employees.filter(e=>e.turno==='ROT9');
+        rows.push(`<tr><td>${fmtDate(d)}</td><td>Q${q}</td><td>Grupo ${fg}</td><td>${freeG.map(e=>e.nombre).join(', ')||'—'}</td><td>${r9l?rot9.map(e=>e.nombre).join(', '):'Trabajan'}</td></tr>`);
+      }
+      d=new Date(d); d.setDate(d.getDate()+7);
+    }
+  }
+
+  document.getElementById('rep-preview').innerHTML=`
+    <div class="rep-head"><h3>📊 ${title}</h3><span style="font-size:12px;color:#64748b">${rows.length} registro(s)</span></div>
+    <div style="overflow-x:auto"><table class="rep-table"><thead>${thead}</thead><tbody>${rows.join('')}</tbody></table></div>`;
+}
+
+function downloadReport(){
+  const type=document.getElementById('rep-type').value;
+  const tbl=document.querySelector('.rep-table');
+  if(!tbl) return;
+  const rows=Array.from(tbl.querySelectorAll('tr')).map(r=>
+    Array.from(r.querySelectorAll('th,td')).map(c=>'"'+c.textContent.replace(/"/g,'""')+'"').join(',')
+  );
+  const csv='﻿'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Limatco_${type}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function printReport(){
+  const preview=document.getElementById('rep-preview');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Limatco</title>
+    <style>body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#7A1215;color:#fff;padding:8px 10px;text-align:left;}
+    td{padding:7px 10px;border-bottom:1px solid #e2e8f0;}
+    h2{color:#1e3a5f;}
+    </style></head><body>
+    <h2>Limatco — Gestión de Turnos 2026</h2>
+    <p style="color:#64748b;font-size:11px">Generado: ${new Date().toLocaleString('es-CL')}</p>
+    ${preview.innerHTML}
+<!-- ══ APP LOADER ══ -->
+<div id="app-loader" style="display:none;position:fixed;inset:0;background:rgba(122,18,21,.93);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:18px;color:#fff">
+  <div style="font-size:52px;animation:lspin 1s linear infinite">⚙️</div>
+  <div id="app-loader-msg" style="font-size:16px;font-weight:700;letter-spacing:.3px">Cargando datos…</div>
+  <div id="app-loader-sub" style="font-size:12px;opacity:.7">Conectando con Google Sheets</div>
+  <style>@keyframes lspin{to{transform:rotate(360deg)}}</style>
+</div>
+<!-- ══ SAVE INDICATOR ══ -->
+<div id="save-indicator" style="position:fixed;bottom:66px;right:12px;font-size:12px;font-weight:700;z-index:198;padding:5px 12px;background:#fff;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:all .3s;opacity:0;pointer-events:none"></div>
+</body></html>`);
+  w.document.close(); w.print();
+}
+
+
+
+// ══════════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// ══════════════════════════════════════════════
+// Pega aquí la URL de tu Apps Script Web App:
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxDISxXVmFWh7dozQo1GtWqFbm6hVirfb9m6dn95GZ1TnGHaxyQgFAZGAjhLOcAH7Wuqg/exec';
+
+function showLoader(show, msg='Cargando datos…', sub='Conectando con Google Sheets'){
+  const el=document.getElementById('app-loader');
+  if(show){
+    el.style.display='flex';
+    document.getElementById('app-loader-msg').textContent=msg;
+    document.getElementById('app-loader-sub').textContent=sub;
+  } else {
+    el.style.display='none';
+  }
+}
+
+function showSaveIndicator(state){
+  const el=document.getElementById('save-indicator');
+  if(!el) return;
+  const MAP={
+    pending:  ['⏳ Pendiente…',   '#f59e0b'],
+    saving:   ['💾 Guardando…',   '#3b82f6'],
+    saved:    ['✅ Guardado',      '#059669'],
+    error:    ['⚠️ Error al guardar','#dc2626'],
+  };
+  const [txt,color]=MAP[state]||['',''];
+  el.textContent=txt; el.style.color=color; el.style.opacity='1';
+  if(state==='saved') setTimeout(()=>{el.style.opacity='0';},3000);
+}
+
+async function loadFromSheets(){
+  if(!SHEETS_URL){ loadState(); return; }
+  showLoader(true,'Cargando turnos…','Conectando con Google Sheets');
+  try{
+    const r=await fetch(SHEETS_URL+'?action=getAll',{cache:'no-cache'});
+    const json=await r.json();
+    if(json.ok && json.data){
+      if(json.data.empleados && json.data.empleados.length){
+        employees=json.data.empleados.map(e=>({
+          ...e, id:parseInt(e.id)
+        }));
+        nextId=Math.max(...employees.map(e=>e.id))+1;
+      }
+      overrides={};
+      (json.data.ausencias||[]).forEach(a=>{
+        if(!overrides[a.dateKey]) overrides[a.dateKey]={};
+        overrides[a.dateKey][parseInt(a.empId)]={status:a.status,note:a.note||''};
+      });
+    }
+  }catch(err){
+    console.warn('Sheets load error — usando localStorage como respaldo:',err.message);
+    loadState();
+  }
+  showLoader(false);
+}
+
+let _saveTimer=null;
+function scheduleSave(){
+  saveState(); // localStorage backup inmediato
+  if(!SHEETS_URL) return;
+  showSaveIndicator('pending');
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(doSaveToSheets,1800);
+}
+
+async function doSaveToSheets(){
+  const ausencias=[];
+  Object.keys(overrides).forEach(dk=>{
+    Object.entries(overrides[dk]).forEach(([eid,v])=>{
+      ausencias.push({dateKey:dk, empId:parseInt(eid), status:v.status, note:v.note||''});
+    });
+  });
+  try{
+    showSaveIndicator('saving');
+    // Encode payload as base64 to avoid URL length issues
+    const payload={empleados:employees, ausencias};
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const url=SHEETS_URL+'?action=saveAll&data='+encodeURIComponent(encoded);
+    const r=await fetch(url,{cache:'no-cache'});
+    const json=await r.json();
+    showSaveIndicator(json.ok?'saved':'error');
+    if(json.ok) saveState(); // sync localStorage backup
+  }catch(err){
+    console.warn('Sheets save error:',err.message);
+    showSaveIndicator('error');
+  }
+}
+
+// ══════════════════════════════════════════════
+// LOCAL STORAGE PERSISTENCE
+// ══════════════════════════════════════════════
+function saveState(){
+  try{
+    localStorage.setItem('limatco_emp', JSON.stringify(employees));
+    localStorage.setItem('limatco_ovr', JSON.stringify(overrides));
+    localStorage.setItem('limatco_nid', String(nextId));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const emp=localStorage.getItem('limatco_emp');
+    const ovr=localStorage.getItem('limatco_ovr');
+    const nid=localStorage.getItem('limatco_nid');
+    if(emp){ const parsed=JSON.parse(emp); if(parsed&&parsed.length) employees=parsed; }
+    if(ovr){ const parsed=JSON.parse(ovr); if(parsed) overrides=parsed; }
+    if(nid){ const n=parseInt(nid); if(n>26) nextId=n; }
+  }catch(e){}
+}
+
+function resetToDefaults(){
+  if(!confirm('¿Restablecer todos los datos al estado inicial? Esto eliminará empleados agregados y ausencias registradas.')) return;
+  localStorage.removeItem('limatco_emp');
+  localStorage.removeItem('limatco_ovr');
+  localStorage.removeItem('limatco_nid');
+  location.reload();
+}
+
+loadState();
+
+// ══════════════════════════════════════════════
+// CLOSE MODALS ON OVERLAY CLICK
+// ══════════════════════════════════════════════
+document.getElementById('ov-emp').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeEmpModal(); });
+document.getElementById('ov-day').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeOverrideModal(); });
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+async function initApp(){
+  await loadFromSheets();
+  renderDashboard();
+  renderCalTodayBox();
+  renderCalendar();
+  renderEmpStats();
+  renderReport();
+}
+initApp();
+</script>
+
+<!-- ══ APP LOADER ══ -->
+<div id="app-loader" style="display:none;position:fixed;inset:0;background:rgba(122,18,21,.93);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:18px;color:#fff">
+  <div style="font-size:52px;animation:lspin 1s linear infinite">⚙️</div>
+  <div id="app-loader-msg" style="font-size:16px;font-weight:700;letter-spacing:.3px">Cargando datos…</div>
+  <div id="app-loader-sub" style="font-size:12px;opacity:.7">Conectando con Google Sheets</div>
+  <style>@keyframes lspin{to{transform:rotate(360deg)}}</style>
+</div>
+<!-- ══ SAVE INDICATOR ══ -->
+<div id="save-indicator" style="position:fixed;bottom:66px;right:12px;font-size:12px;font-weight:700;z-index:198;padding:5px 12px;background:#fff;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:all .3s;opacity:0;pointer-events:none"></div>
+</body>
+</html>
