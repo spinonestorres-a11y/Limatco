@@ -1288,6 +1288,7 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxDISxXVmFWh7dozQo1G
 
 function showLoader(show, msg='Cargando datos…', sub='Conectando con Google Sheets'){
   const el=document.getElementById('app-loader');
+  if(!el) return; // null-safe: loader puede no estar en DOM aún
   if(show){
     el.style.display='flex';
     document.getElementById('app-loader-msg').textContent=msg;
@@ -1417,7 +1418,8 @@ async function initApp(){
   renderEmpStats();
   renderReport();
 }
-initApp();
+// Defer so the loader divs (which come after this script tag) estén en el DOM
+setTimeout(initApp, 0);
 </script>
 
 <!-- ══ APP LOADER ══ -->
