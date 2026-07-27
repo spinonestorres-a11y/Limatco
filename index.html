@@ -545,6 +545,29 @@ tr:hover td{background:#f8fafc;}
 </div>
 
 </div><!-- /content -->
+<!-- ══ MODAL: GESTIONAR SÁBADO LIBRE ══ -->
+<div class="overlay" id="ov-sat">
+  <div class="modal modal-lg">
+    <h3 id="sat-modal-title">Gestionar Sábado Libre</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Mueve empleados entre turnos. Los cambios manuales se marcan con ★ y se guardan automáticamente.</p>
+    <div class="sat-legend">★ = cambio manual · el turno automático se indica entre paréntesis</div>
+    <div class="sat-mgr-grid">
+      <div class="sat-col sat-col-work">
+        <div class="sat-col-title">⚙️ Trabajan este sábado</div>
+        <div id="sat-working"></div>
+      </div>
+      <div class="sat-col sat-col-libre">
+        <div class="sat-col-title">🎉 Sábado libre</div>
+        <div id="sat-libre"></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-secondary" onclick="resetSatOverrides()">↺ Restablecer automático</button>
+      <button class="btn btn-primary" onclick="closeSatMgr()">✓ Listo</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ══ MODAL: EMPLEADO ══ -->
 <div class="overlay" id="ov-emp">
@@ -1309,29 +1332,6 @@ function printReport(){
     <h2>Limatco — Gestión de Turnos 2026</h2>
     <p style="color:#64748b;font-size:11px">Generado: ${new Date().toLocaleString('es-CL')}</p>
     ${preview.innerHTML}
-
-<!-- ══ MODAL: GESTIONAR SÁBADO LIBRE ══ -->
-<div class="overlay" id="ov-sat">
-  <div class="modal modal-lg">
-    <h3 id="sat-modal-title">Gestionar Sábado Libre</h3>
-    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Mueve empleados entre turnos. Los cambios manuales se marcan con ★ y se guardan automáticamente.</p>
-    <div class="sat-legend">★ = cambio manual · el turno automático se indica entre paréntesis</div>
-    <div class="sat-mgr-grid">
-      <div class="sat-col sat-col-work">
-        <div class="sat-col-title">⚙️ Trabajan este sábado</div>
-        <div id="sat-working"></div>
-      </div>
-      <div class="sat-col sat-col-libre">
-        <div class="sat-col-title">🎉 Sábado libre</div>
-        <div id="sat-libre"></div>
-      </div>
-    </div>
-    <div class="modal-actions" style="margin-top:14px;">
-      <button class="btn btn-secondary" onclick="resetSatOverrides()">↺ Restablecer automático</button>
-      <button class="btn btn-primary" onclick="closeSatMgr()">✓ Listo</button>
-    </div>
-  </div>
-</div>
 
 <!-- ══ APP LOADER ══ -->
 <div id="app-loader" style="display:none;position:fixed;inset:0;background:rgba(122,18,21,.93);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:18px;color:#fff">
