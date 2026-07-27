@@ -364,6 +364,33 @@ tr:hover td{background:#f8fafc;}
   .cpill{display:none;}
 }
 
+
+/* ── SATURDAY MANAGER ── */
+.sat-mgr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.sat-col{border-radius:10px;padding:12px 14px;}
+.sat-col-work{background:#fff5f5;border:1.5px solid #fca5a5;}
+.sat-col-libre{background:#f0fdf4;border:1.5px solid #86efac;}
+.sat-col-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid;}
+.sat-col-work .sat-col-title{color:#991b1b;border-bottom-color:#fca5a5;}
+.sat-col-libre .sat-col-title{color:#065f46;border-bottom-color:#86efac;}
+.sat-emp-card{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;background:#fff;margin-bottom:4px;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.sat-emp-card.is-manual{outline:2px solid #f59e0b;}
+.sat-emp-info{flex:1;min-width:0;}
+.sat-emp-info strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sat-emp-info span{font-size:10px;color:#94a3b8;}
+.sat-star{font-size:10px;color:#f59e0b;font-weight:800;}
+.btn-sat-swap{padding:3px 8px;font-size:11px;font-weight:700;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.btn-to-libre{background:#d1fae5;color:#065f46;}.btn-to-libre:hover{background:#a7f3d0;}
+.btn-to-work{background:#fee2e2;color:#991b1b;}.btn-to-work:hover{background:#fecaca;}
+.sat-empty{font-size:12px;color:#94a3b8;text-align:center;padding:12px 0;font-style:italic;}
+.sat-legend{font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-top:8px;}
+.libre-sabado-badge{font-size:10px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-weight:700;}
+.trabaja-sabado-badge{font-size:10px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-weight:700;}
+@media(max-width:768px){
+  .sat-mgr-grid{grid-template-columns:1fr;}
+  .sat-emp-info strong{font-size:11px;}
+}
+
 @media print{.tabs,.hdr-right,.btn,.overlay,.modal,.day-panel .dp-head .btn{display:none!important;}.panel{display:block!important;}}
 </style>
 </head>
@@ -429,7 +456,8 @@ tr:hover td{background:#f8fafc;}
   <div class="day-panel" id="day-panel">
     <div class="dp-head">
       <h3 id="dp-title"></h3>
-      <button class="btn btn-warning btn-sm" onclick="openOverrideModal()">✏️ Editar este día</button>
+      <button class="btn btn-warning btn-sm" onclick="openOverrideModal()">✏️ Editar ausencias</button>
+      <button class="btn btn-primary btn-sm" id="dp-sat-btn" style="display:none" onclick="openSatMgr()">🔄 Gestionar sábado libre</button>
       <button class="btn btn-secondary btn-sm" onclick="closePanel()">✕ Cerrar</button>
     </div>
     <p id="dp-sublabel" style="font-size:12px;color:#64748b;margin-bottom:12px;"></p>
@@ -627,7 +655,11 @@ function getOverride(date, empId){
 }
 function isAbsent(date, empId){
   const ov=getOverride(date,empId);
-  return ov && ov.status!=='normal';
+  return ov && ['vacaciones','licencia','permiso','ausente'].includes(ov.status);
+}
+function isSatOverride(date, empId){
+  const ov=getOverride(date,empId);
+  return ov && (ov.status==='libresabado'||ov.status==='trabajasabado');
 }
 function dayHasOverrides(date){
   const k=dateKey(date);
@@ -635,7 +667,7 @@ function dayHasOverrides(date){
   return Object.values(overrides[k]).some(v=>v.status!=='normal');
 }
 function statusLabel(s){
-  const m={vacaciones:'Vacaciones',licencia:'Licencia Médica',permiso:'Permiso',ausente:'Ausente',normal:'Normal'};
+  const m={vacaciones:'Vacaciones',licencia:'Licencia Médica',permiso:'Permiso',ausente:'Ausente',normal:'Normal',libresabado:'Libre Sábado ★',trabajasabado:'Trabaja Sábado ★'};
   return m[s]||s;
 }
 function statusBadge(s){
@@ -643,6 +675,8 @@ function statusBadge(s){
   if(s==='licencia')   return '<span class="license-badge">Licencia</span>';
   if(s==='permiso')    return '<span class="permission-badge">Permiso</span>';
   if(s==='ausente')    return '<span class="absent-badge">Ausente</span>';
+  if(s==='libresabado') return '<span class="libre-sabado-badge">Libre ★</span>';
+  if(s==='trabajasabado') return '<span class="trabaja-sabado-badge">Trabaja ★</span>';
   return '';
 }
 
@@ -655,10 +689,19 @@ function getGroups(date){
   employees.forEach(e=>{
     if(isAbsent(date,e.id)) return;
     if(isSat){
-      if(e.turno==='FIJO'||(!r9libre&&e.turno==='ROT9')) g09.push(e);
-      else if(r9libre&&e.turno==='ROT9') gLibre.push(e);
-      else if(e.turno===fg) gLibre.push(e);
-      else if(e.turno===wg) g10.push(e);
+      // Base slot from rotation rules
+      let slot='none'; // '09' | '10' | 'libre'
+      if(e.turno==='FIJO') slot='09';
+      else if(e.turno==='ROT9') slot=r9libre?'libre':'09';
+      else if(e.turno===fg) slot='libre';
+      else if(e.turno===wg) slot='10';
+      // Apply manual sat overrides
+      const ov=getOverride(date,e.id);
+      if(ov&&ov.status==='libresabado') slot='libre';
+      if(ov&&ov.status==='trabajasabado') slot=(e.turno==='FIJO'||e.turno==='ROT9')?'09':'10';
+      if(slot==='09') g09.push(e);
+      else if(slot==='10') g10.push(e);
+      else if(slot==='libre') gLibre.push(e);
     } else {
       if(e.turno==='FIJO'||(e.turno==='ROT9'&&!r9on10)) g09.push(e);
       else g10.push(e);
@@ -670,7 +713,7 @@ function getGroups(date){
 function getAbsentToday(date){
   const k=dateKey(date);
   if(!overrides[k]) return [];
-  return employees.filter(e=>overrides[k][e.id]&&overrides[k][e.id].status!=='normal')
+  return employees.filter(e=>overrides[k][e.id]&&['vacaciones','licencia','permiso','ausente'].includes(overrides[k][e.id].status))
     .map(e=>({...e,ovStatus:overrides[k][e.id].status,ovNote:overrides[k][e.id].note}));
 }
 
@@ -900,6 +943,7 @@ function showDayDetail(date){
   const absents=getAbsentToday(date);
 
   document.getElementById('dp-title').textContent=`${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  document.getElementById('dp-sat-btn').style.display=isSat?'inline-flex':'none';
   const r9lbl=r9on10?'Rotativo en turno 10:30':'Rotativo en turno 09:00';
   document.getElementById('dp-sublabel').textContent=`Quincena N° ${q} · ${r9lbl}${isSat?` · Grupo ${fg} tiene sábado libre`:''}`;
 
@@ -1265,6 +1309,30 @@ function printReport(){
     <h2>Limatco — Gestión de Turnos 2026</h2>
     <p style="color:#64748b;font-size:11px">Generado: ${new Date().toLocaleString('es-CL')}</p>
     ${preview.innerHTML}
+
+<!-- ══ MODAL: GESTIONAR SÁBADO LIBRE ══ -->
+<div class="overlay" id="ov-sat">
+  <div class="modal modal-lg">
+    <h3 id="sat-modal-title">Gestionar Sábado Libre</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Mueve empleados entre turnos. Los cambios manuales se marcan con ★ y se guardan automáticamente.</p>
+    <div class="sat-legend">★ = cambio manual · el turno automático se indica entre paréntesis</div>
+    <div class="sat-mgr-grid">
+      <div class="sat-col sat-col-work">
+        <div class="sat-col-title">⚙️ Trabajan este sábado</div>
+        <div id="sat-working"></div>
+      </div>
+      <div class="sat-col sat-col-libre">
+        <div class="sat-col-title">🎉 Sábado libre</div>
+        <div id="sat-libre"></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-secondary" onclick="resetSatOverrides()">↺ Restablecer automático</button>
+      <button class="btn btn-primary" onclick="closeSatMgr()">✓ Listo</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ APP LOADER ══ -->
 <div id="app-loader" style="display:none;position:fixed;inset:0;background:rgba(122,18,21,.93);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:18px;color:#fff">
   <div style="font-size:52px;animation:lspin 1s linear infinite">⚙️</div>
@@ -1401,11 +1469,113 @@ function resetToDefaults(){
 
 loadState();
 
+
+// ══════════════════════════════════════════════
+// SATURDAY MANAGER
+// ══════════════════════════════════════════════
+let satDate = null;
+
+function openSatMgr(){
+  satDate = currentDayDate;
+  renderSatMgr();
+  document.getElementById('ov-sat').classList.add('open');
+}
+function closeSatMgr(){
+  document.getElementById('ov-sat').classList.remove('open');
+}
+
+function renderSatMgr(){
+  if(!satDate) return;
+  const {g09,g10,gLibre,fg,wg,r9libre,q} = getGroups(satDate);
+  const working=[...g09,...g10];
+
+  // Helper: what is the AUTO group for an employee on this Saturday?
+  function autoSlot(e){
+    if(e.turno==='FIJO') return 'work';
+    if(e.turno==='ROT9') return r9libre?'libre':'work';
+    if(e.turno===fg) return 'libre';
+    if(e.turno===wg) return 'work';
+    return 'work';
+  }
+
+  function empCard(e, currentSlot, btnClass, btnLabel, btnAction){
+    const ov=getOverride(satDate,e.id);
+    const isManual=ov&&(ov.status==='libresabado'||ov.status==='trabajasabado');
+    const auto=autoSlot(e);
+    const autoLabel=auto==='libre'?'auto: libre':'auto: trabaja';
+    return `<div class="sat-emp-card${isManual?' is-manual':''}">
+      <div class="sat-emp-info">
+        <strong>${isManual?'★ ':''}${e.nombre}</strong>
+        <span>${e.cargo} · <em>${autoLabel}</em></span>
+      </div>
+      <button class="btn-sat-swap ${btnClass}" onclick="${btnAction}(${e.id})">${btnLabel}</button>
+    </div>`;
+  }
+
+  const workHTML = working.length
+    ? working.map(e=>empCard(e,'work','btn-to-libre','→ Libre','moveToLibre')).join('')
+    : '<div class="sat-empty">Sin empleados trabajando</div>';
+
+  const libreHTML = gLibre.length
+    ? gLibre.map(e=>empCard(e,'libre','btn-to-work','← Trabaja','moveToWork')).join('')
+    : '<div class="sat-empty">Sin empleados libres</div>';
+
+  document.getElementById('sat-working').innerHTML=workHTML;
+  document.getElementById('sat-libre').innerHTML=libreHTML;
+  document.getElementById('sat-modal-title').textContent=
+    `🔄 Sábado ${satDate.getDate()}/${satDate.getMonth()+1}/${satDate.getFullYear()} — Quincena Q${quincenaOf(satDate)}`;
+}
+
+function moveToLibre(empId){
+  const dk=dateKey(satDate);
+  if(!overrides[dk]) overrides[dk]={};
+  const ov=overrides[dk][empId];
+  // If already libresabado (toggle off → remove override)
+  if(ov&&ov.status==='libresabado'){ delete overrides[dk][empId]; }
+  else { overrides[dk][empId]={status:'libresabado',note:'Cambio manual'}; }
+  if(Object.keys(overrides[dk]).length===0) delete overrides[dk];
+  _afterSatChange();
+}
+
+function moveToWork(empId){
+  const dk=dateKey(satDate);
+  if(!overrides[dk]) overrides[dk]={};
+  const ov=overrides[dk][empId];
+  // If already trabajasabado (toggle off → remove override)
+  if(ov&&ov.status==='trabajasabado'){ delete overrides[dk][empId]; }
+  else { overrides[dk][empId]={status:'trabajasabado',note:'Cambio manual'}; }
+  if(Object.keys(overrides[dk]).length===0) delete overrides[dk];
+  _afterSatChange();
+}
+
+function resetSatOverrides(){
+  if(!satDate) return;
+  const dk=dateKey(satDate);
+  if(overrides[dk]){
+    Object.keys(overrides[dk]).forEach(eid=>{
+      const s=overrides[dk][eid].status;
+      if(s==='libresabado'||s==='trabajasabado') delete overrides[dk][eid];
+    });
+    if(Object.keys(overrides[dk]).length===0) delete overrides[dk];
+  }
+  _afterSatChange();
+}
+
+function _afterSatChange(){
+  renderSatMgr();
+  renderCalendar();
+  renderCalTodayBox();
+  if(currentDayDate) showDayDetail(currentDayDate);
+  renderDashboardIfActive();
+  scheduleSave();
+}
+
 // ══════════════════════════════════════════════
 // CLOSE MODALS ON OVERLAY CLICK
 // ══════════════════════════════════════════════
 document.getElementById('ov-emp').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeEmpModal(); });
 document.getElementById('ov-day').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeOverrideModal(); });
+document.getElementById('ov-sat').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeSatMgr(); });
 
 // ══════════════════════════════════════════════
 // INIT
@@ -1421,6 +1591,30 @@ async function initApp(){
 // Defer so the loader divs (which come after this script tag) estén en el DOM
 setTimeout(initApp, 0);
 </script>
+
+
+<!-- ══ MODAL: GESTIONAR SÁBADO LIBRE ══ -->
+<div class="overlay" id="ov-sat">
+  <div class="modal modal-lg">
+    <h3 id="sat-modal-title">Gestionar Sábado Libre</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Mueve empleados entre turnos. Los cambios manuales se marcan con ★ y se guardan automáticamente.</p>
+    <div class="sat-legend">★ = cambio manual · el turno automático se indica entre paréntesis</div>
+    <div class="sat-mgr-grid">
+      <div class="sat-col sat-col-work">
+        <div class="sat-col-title">⚙️ Trabajan este sábado</div>
+        <div id="sat-working"></div>
+      </div>
+      <div class="sat-col sat-col-libre">
+        <div class="sat-col-title">🎉 Sábado libre</div>
+        <div id="sat-libre"></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-secondary" onclick="resetSatOverrides()">↺ Restablecer automático</button>
+      <button class="btn btn-primary" onclick="closeSatMgr()">✓ Listo</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ APP LOADER ══ -->
 <div id="app-loader" style="display:none;position:fixed;inset:0;background:rgba(122,18,21,.93);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:18px;color:#fff">
