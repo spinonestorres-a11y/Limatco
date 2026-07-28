@@ -596,6 +596,22 @@ tr:hover td{background:#f8fafc;}
         <div class="fr"><label>Salida Sábado</label><input type="time" id="f-sat-out" placeholder="13:30"></div>
       </div>
     </div>
+    <div style="background:#fff8f8;border-radius:8px;padding:12px;margin-bottom:12px;border:1px solid #fecaca;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#991b1b;margin-bottom:8px;">🔄 Cambio de turno programado (opcional)</div>
+      <p style="font-size:11px;color:#64748b;margin-bottom:8px;">Úsalo cuando un empleado deba pasar a otro turno en una fecha futura (ej: de Rotativo a Grupo A). El cambio se aplica automáticamente ese día en adelante.</p>
+      <div class="fr-row">
+        <div class="fr"><label>Fecha del cambio</label><input type="date" id="f-change-date"></div>
+        <div class="fr"><label>Turno desde esa fecha</label>
+          <select id="f-change-to">
+            <option value="">— Sin cambio programado —</option>
+            <option value="FIJO">Turno Fijo 09:00</option>
+            <option value="ROT9">Rotativo 09↔10:30</option>
+            <option value="A">Grupo A · 10:30</option>
+            <option value="B">Grupo B · 10:30</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeEmpModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveEmployee()">Guardar</button>
@@ -631,14 +647,14 @@ let employees = [
   {id:5,  nombre:'Lisandro Maragaño', cargo:'Vigía',             turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
   {id:6,  nombre:'Marlon Otiniano',   cargo:'Apoyo Despacho',    turno:'FIJO', lvIn:'10:00',lvOut:'18:30',satIn:'09:30',satOut:'14:00'},
   {id:7,  nombre:'Patricio Lienlaf',  cargo:'Operador de Grúa',  turno:'FIJO', lvIn:'09:00',lvOut:'17:00',satIn:'08:30',satOut:'13:00'},
-  {id:8,  nombre:'Victor Leiva',      cargo:'Operador de Grúa',  turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:9,  nombre:'Jesus Calderon',    cargo:'Enc. Sector A',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:10, nombre:'Amos Altema',       cargo:'Enc. Sector B',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:11, nombre:'Diumetre Clotaire', cargo:'Enc. Sector C',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:12, nombre:'Ricardo Rojas',     cargo:'Enc. Sector D',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:13, nombre:'Yosmic Pauldeux',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:14, nombre:'Dante Contreras',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:15, nombre:'Juan Rivera',       cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:8,  nombre:'Victor Leiva',      cargo:'Operador de Grúa',  turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  {id:9,  nombre:'Jesus Calderon',    cargo:'Enc. Sector A',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  {id:10, nombre:'Amos Altema',       cargo:'Enc. Sector B',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  {id:11, nombre:'Diumetre Clotaire', cargo:'Enc. Sector C',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  {id:12, nombre:'Ricardo Rojas',     cargo:'Enc. Sector D',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  {id:13, nombre:'Yosmic Pauldeux',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  {id:14, nombre:'Dante Contreras',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  {id:15, nombre:'Juan Rivera',       cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
   {id:16, nombre:'Felipe Palma',      cargo:'Apoyo Despacho',    turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
   {id:17, nombre:'Alberto Collao',    cargo:'Operador de Grúa',  turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
   {id:18, nombre:'Segundo Martinez',  cargo:'2° Sector D',       turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
@@ -671,6 +687,16 @@ function rot9LibreOnSat(d){ return rot9On1030(quincenaOf(d)); }
 function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(d){ return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; }
 function todayDate(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+
+// Returns the turno that actually applies to employee e on a given date,
+// accounting for a scheduled future turno change (turnoChangeDate/turnoChangeTo).
+function effectiveTurno(e, date){
+  if(e.turnoChangeDate){
+    const cd=new Date(e.turnoChangeDate+'T00:00:00');
+    if(date>=cd) return e.turnoChangeTo;
+  }
+  return e.turno;
+}
 
 function getOverride(date, empId){
   const k=dateKey(date);
@@ -711,22 +737,23 @@ function getGroups(date){
   const g09=[], g10=[], gLibre=[];
   employees.forEach(e=>{
     if(isAbsent(date,e.id)) return;
+    const et=effectiveTurno(e,date);
     if(isSat){
       // Base slot from rotation rules
       let slot='none'; // '09' | '10' | 'libre'
-      if(e.turno==='FIJO') slot='09';
-      else if(e.turno==='ROT9') slot=r9libre?'libre':'09';
-      else if(e.turno===fg) slot='libre';
-      else if(e.turno===wg) slot='10';
+      if(et==='FIJO') slot='09';
+      else if(et==='ROT9') slot=r9libre?'libre':'09';
+      else if(et===fg) slot='libre';
+      else if(et===wg) slot='10';
       // Apply manual sat overrides
       const ov=getOverride(date,e.id);
       if(ov&&ov.status==='libresabado') slot='libre';
-      if(ov&&ov.status==='trabajasabado') slot=(e.turno==='FIJO'||e.turno==='ROT9')?'09':'10';
+      if(ov&&ov.status==='trabajasabado') slot=(et==='FIJO'||et==='ROT9')?'09':'10';
       if(slot==='09') g09.push(e);
       else if(slot==='10') g10.push(e);
       else if(slot==='libre') gLibre.push(e);
     } else {
-      if(e.turno==='FIJO'||(e.turno==='ROT9'&&!r9on10)) g09.push(e);
+      if(et==='FIJO'||(et==='ROT9'&&!r9on10)) g09.push(e);
       else g10.push(e);
     }
   });
@@ -778,8 +805,8 @@ function renderDashboard(){
     <div class="sc green"><div class="sc-num">${isWork?(g09.length+g10.length+(isSat?gLibre.length:0)):0}</div><div class="sc-label">Presentes hoy</div></div>
     <div class="sc amber"><div class="sc-num">${isSat?gLibre.length:0}</div><div class="sc-label">Sáb. libre hoy</div></div>
     <div class="sc red"><div class="sc-num">${absents.length}</div><div class="sc-label">Ausencias registradas</div></div>
-    <div class="sc purple"><div class="sc-num">${employees.filter(e=>e.turno==='A'||e.turno==='B').length}</div><div class="sc-label">Con beneficio sáb.</div></div>
-    <div class="sc cyan"><div class="sc-num">${employees.filter(e=>e.turno==='ROT9').length}</div><div class="sc-label">Turno rotativo</div></div>`;
+    <div class="sc purple"><div class="sc-num">${employees.filter(e=>['A','B'].includes(effectiveTurno(e,today))).length}</div><div class="sc-label">Con beneficio sáb.</div></div>
+    <div class="sc cyan"><div class="sc-num">${employees.filter(e=>effectiveTurno(e,today)==='ROT9').length}</div><div class="sc-label">Turno rotativo</div></div>`;
 
   // Left column — today's shifts
   const empRows=(arr)=>arr.map(e=>{
@@ -793,7 +820,7 @@ function renderDashboard(){
   const empRowsFixed=(arr)=>arr.map(e=>{
     const ov=getOverride(today,e.id);
     const badge=ov&&ov.status!=='normal'?statusBadge(ov.status):'';
-    const dotColor={FIJO:'#7c3aed',ROT9:'#0891b2',A:'#059669',B:'#dc2626'}[e.turno]||'#94a3b8';
+    const dotColor={FIJO:'#7c3aed',ROT9:'#0891b2',A:'#059669',B:'#dc2626'}[effectiveTurno(e,today)]||'#94a3b8';
     return `<div class="emp-row"><div class="dot" style="background:${dotColor}"></div><span style="flex:1">${e.nombre}</span><span style="font-size:10px;color:#94a3b8">${e.cargo}</span>${badge}</div>`;
   }).join('');
 
@@ -812,8 +839,8 @@ function renderDashboard(){
   for(let i=0;i<8;i++){
     if(d>new Date(2026,11,31)) break;
     const fg=freeGroupOnSat(d), r9l=rot9LibreOnSat(d);
-    const r9Count=employees.filter(e=>e.turno==='ROT9').length;
-    const libreCount=employees.filter(e=>e.turno===fg).length+(r9l?r9Count:0);
+    const r9Count=employees.filter(e=>effectiveTurno(e,d)==='ROT9').length;
+    const libreCount=employees.filter(e=>effectiveTurno(e,d)===fg).length+(r9l?r9Count:0);
     nextSats+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
       <span style="font-weight:700">${fmtDate(d)}</span>
       <span style="color:#065f46;font-weight:700">Libre: Grupo ${fg}${r9l?' + Rot.':''} (${libreCount})</span>
@@ -928,9 +955,9 @@ function renderCalendar(){
           </div>`;
         }
       } else {
-        const empF=filterShift?employees.filter(e=>e.turno===filterShift):null;
-        const g09cnt=employees.filter(e=>e.turno==='FIJO'||(e.turno==='ROT9'&&!r9on10)).length;
-        const g10cnt=employees.filter(e=>e.turno==='A'||e.turno==='B'||(e.turno==='ROT9'&&r9on10)).length;
+        const empF=filterShift?employees.filter(e=>effectiveTurno(e,date)===filterShift):null;
+        const g09cnt=employees.filter(e=>{const et=effectiveTurno(e,date); return et==='FIJO'||(et==='ROT9'&&!r9on10);}).length;
+        const g10cnt=employees.filter(e=>{const et=effectiveTurno(e,date); return et==='A'||et==='B'||(et==='ROT9'&&r9on10);}).length;
         if(!filterShift){
           content=`<div class="cc-content">
             <span class="cpill cpill-q">Q${q}</span>
@@ -970,10 +997,10 @@ function showDayDetail(date){
   const r9lbl=r9on10?'Rotativo en turno 10:30':'Rotativo en turno 09:00';
   document.getElementById('dp-sublabel').textContent=`Quincena N° ${q} · ${r9lbl}${isSat?` · Grupo ${fg} tiene sábado libre`:''}`;
 
-  const fijos=employees.filter(e=>e.turno==='FIJO');
-  const rot9=employees.filter(e=>e.turno==='ROT9');
-  const grpA=employees.filter(e=>e.turno==='A');
-  const grpB=employees.filter(e=>e.turno==='B');
+  const fijos=employees.filter(e=>effectiveTurno(e,date)==='FIJO');
+  const rot9=employees.filter(e=>effectiveTurno(e,date)==='ROT9');
+  const grpA=employees.filter(e=>effectiveTurno(e,date)==='A');
+  const grpB=employees.filter(e=>effectiveTurno(e,date)==='B');
 
   const chip=(e,cls)=>{
     const ov=getOverride(date,e.id);
@@ -985,8 +1012,8 @@ function showDayDetail(date){
 
   let body='';
   if(isSat){
-    const libreG=employees.filter(e=>e.turno===fg);
-    const workG=employees.filter(e=>e.turno===wg);
+    const libreG=employees.filter(e=>effectiveTurno(e,date)===fg);
+    const workG=employees.filter(e=>effectiveTurno(e,date)===wg);
     const workCnt=fijos.length+(r9l?0:rot9.length)+workG.length;
     const libreCnt=libreG.length+(r9l?rot9.length:0);
     let w=`<div class="sublbl">Turno Fijo · ${fijos[0]?.satIn||'09:00'}–${fijos[0]?.satOut||'13:30'}</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
@@ -1025,10 +1052,10 @@ function openOverrideForDate(date){
   document.getElementById('day-modal-title').textContent=`Editar: ${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 
   const groups=[
-    {label:'Turno Fijo 09:00',emps:employees.filter(e=>e.turno==='FIJO')},
-    {label:'Turno Rotativo',emps:employees.filter(e=>e.turno==='ROT9')},
-    {label:'Grupo A · 10:30',emps:employees.filter(e=>e.turno==='A')},
-    {label:'Grupo B · 10:30',emps:employees.filter(e=>e.turno==='B')},
+    {label:'Turno Fijo 09:00',emps:employees.filter(e=>effectiveTurno(e,date)==='FIJO')},
+    {label:'Turno Rotativo',emps:employees.filter(e=>effectiveTurno(e,date)==='ROT9')},
+    {label:'Grupo A · 10:30',emps:employees.filter(e=>effectiveTurno(e,date)==='A')},
+    {label:'Grupo B · 10:30',emps:employees.filter(e=>effectiveTurno(e,date)==='B')},
   ];
 
   let html='<thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th><th>Nota</th></tr></thead><tbody>';
@@ -1093,22 +1120,38 @@ function renderQuincenas(){
   let html='';
   qs.forEach(q=>{
     if(filterMonth&&q.start.getMonth()!==parseInt(filterMonth)&&q.end.getMonth()!==parseInt(filterMonth)) return;
-    const fijos=employees.filter(e=>e.turno==='FIJO');
-    const rot9=employees.filter(e=>e.turno==='ROT9');
-    const grpA=employees.filter(e=>e.turno==='A');
-    const grpB=employees.filter(e=>e.turno==='B');
+    // Usamos el fin de la quincena como fecha de referencia para agrupar
+    // (así una quincena que incluye un cambio de turno muestra la asignación vigente en su mayor parte)
+    const refDate=q.end;
+    const fijos=employees.filter(e=>effectiveTurno(e,refDate)==='FIJO');
+    const rot9=employees.filter(e=>effectiveTurno(e,refDate)==='ROT9');
+    const grpA=employees.filter(e=>effectiveTurno(e,refDate)==='A');
+    const grpB=employees.filter(e=>effectiveTurno(e,refDate)==='B');
     const r9on10=rot9On1030(q.num);
+
+    // Nota de transición: empleados que cambian de turno DENTRO de esta quincena
+    const transitioning=employees.filter(e=>{
+      if(!e.turnoChangeDate) return false;
+      const cd=new Date(e.turnoChangeDate+'T00:00:00');
+      return cd>=q.start&&cd<=q.end;
+    });
+    let transNote='';
+    if(transitioning.length){
+      const cd=new Date(transitioning[0].turnoChangeDate+'T00:00:00');
+      transNote=`<div style="grid-column:1/-1;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:4px;font-weight:600">⚠️ Cambio de turno el ${fmtDate(cd)}: ${transitioning.map(e=>e.nombre+' → Grupo '+e.turnoChangeTo).join(', ')}</div>`;
+    }
 
     let satHTML='';
     q.saturdays.forEach(s=>{
       const fg=freeGroupOnSat(s), wg=fg==='A'?'B':'A';
       const r9l=rot9LibreOnSat(s);
-      const freeG=employees.filter(e=>e.turno===fg);
-      const workG=employees.filter(e=>e.turno===wg);
+      const freeG=employees.filter(e=>effectiveTurno(e,s)===fg);
+      const workG=employees.filter(e=>effectiveTurno(e,s)===wg);
+      const rot9OnThisSat=employees.filter(e=>effectiveTurno(e,s)==='ROT9');
       satHTML+=`<div class="sat-row">
         <div class="sr-date">📅 Sábado ${fmtDate(s)}</div>
         <div><span class="sr-badge srb-libre">🟢 LIBRE · Gpo ${fg}</span><span style="font-size:11px;color:#065f46">${freeG.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
-        ${r9l?`<div><span class="sr-badge srb-rot">🔵 LIBRE · Rot.</span><span style="font-size:11px;color:#155e75">${rot9.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>`:''}
+        ${r9l?`<div><span class="sr-badge srb-rot">🔵 LIBRE · Rot.</span><span style="font-size:11px;color:#155e75">${rot9OnThisSat.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>`:''}
         <div><span class="sr-badge srb-work">🔴 TRABAJA · Gpo ${wg}</span><span style="font-size:11px;color:#991b1b">09:30–14:00</span></div>
       </div>`;
     });
@@ -1122,6 +1165,7 @@ function renderQuincenas(){
         <div class="q-toggle">▼</div>
       </div>
       <div class="qc-body">
+        ${transNote}
         <div class="qg">
           <h4>Turno Fijo 09:00</h4>
           <span class="qg-badge b09">09:00–17:30 · Sáb 09:00–13:30</span>
@@ -1130,7 +1174,7 @@ function renderQuincenas(){
         <div class="qg">
           <h4>Turno Rotativo</h4>
           <span class="qg-badge ${r9on10?'b10':'b09'}">${r9on10?'10:30–19:00 · Sáb LIBRE':'09:00–17:30 · Sáb 09:00–13:30'}</span>
-          <ul>${rot9.map(e=>`<li class="${r9on10?'li-r9l':'li-r9w'}">${e.nombre}</li>`).join('')}</ul>
+          <ul>${rot9.length?rot9.map(e=>`<li class="${r9on10?'li-r9l':'li-r9w'}">${e.nombre}</li>`).join(''):'<li style="color:#94a3b8;list-style:none">Sin empleados en este turno</li>'}</ul>
         </div>
         <div class="qg">
           <h4>Grupos A y B · 10:30</h4>
@@ -1152,6 +1196,15 @@ function qCollapseAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.cla
 const TLABEL={FIJO:'Fijo 09:00',ROT9:'Rot. 09↔10:30',A:'10:30 · Gpo A',B:'10:30 · Gpo B'};
 const TLIBRE={FIJO:'❌ No aplica',ROT9:'✅ En Q par (10:30)',A:'✅ Alterno · Gpo A',B:'✅ Alterno · Gpo B'};
 
+// Muestra una nota si el empleado tiene un cambio de turno programado a futuro
+function turnoPendingNote(e){
+  if(!e.turnoChangeDate) return '';
+  const cd=new Date(e.turnoChangeDate+'T00:00:00');
+  if(todayDate()>=cd) return '';
+  const toLabel=e.turnoChangeTo==='A'?'Grupo A':e.turnoChangeTo==='B'?'Grupo B':TLABEL[e.turnoChangeTo]||e.turnoChangeTo;
+  return `<br><span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap;display:inline-block;margin-top:3px">→ ${toLabel} desde ${fmtDate(cd)}</span>`;
+}
+
 function renderTable(){
   const search=document.getElementById('emp-search').value.toLowerCase();
   const ft=document.getElementById('emp-filter-turno').value;
@@ -1161,7 +1214,7 @@ function renderTable(){
       <td style="color:#94a3b8">${i+1}</td>
       <td style="font-weight:700">${e.nombre}</td>
       <td style="color:#64748b;font-size:12px">${e.cargo}</td>
-      <td><span class="tb tb-${e.turno}">${TLABEL[e.turno]}</span></td>
+      <td><span class="tb tb-${e.turno}">${TLABEL[e.turno]}</span>${turnoPendingNote(e)}</td>
       <td style="font-size:12px;color:#64748b">${e.lvIn||'—'} – ${e.lvOut||'—'}</td>
       <td style="font-size:12px;color:#64748b">${e.satIn||'—'} – ${e.satOut||'—'}</td>
       <td style="font-size:12px">${TLIBRE[e.turno]}</td>
@@ -1206,6 +1259,8 @@ function openEmpModal(id=null){
     document.getElementById('f-lv-out').value=e.lvOut||'';
     document.getElementById('f-sat-in').value=e.satIn||'';
     document.getElementById('f-sat-out').value=e.satOut||'';
+    document.getElementById('f-change-date').value=e.turnoChangeDate||'';
+    document.getElementById('f-change-to').value=e.turnoChangeTo||'';
   } else {
     document.getElementById('f-nombre').value='';
     document.getElementById('f-cargo').value='';
@@ -1214,6 +1269,8 @@ function openEmpModal(id=null){
     document.getElementById('f-lv-out').value='17:30';
     document.getElementById('f-sat-in').value='09:00';
     document.getElementById('f-sat-out').value='13:30';
+    document.getElementById('f-change-date').value='';
+    document.getElementById('f-change-to').value='';
   }
   updateEmpInfo();
   document.getElementById('ov-emp').classList.add('open');
@@ -1222,6 +1279,8 @@ function closeEmpModal(){ document.getElementById('ov-emp').classList.remove('op
 function saveEmployee(){
   const nombre=document.getElementById('f-nombre').value.trim();
   if(!nombre){alert('Ingresa el nombre');return;}
+  const changeDate=document.getElementById('f-change-date').value;
+  const changeTo=document.getElementById('f-change-to').value;
   const data={
     nombre,cargo:document.getElementById('f-cargo').value.trim(),
     turno:document.getElementById('f-turno').value,
@@ -1229,6 +1288,8 @@ function saveEmployee(){
     lvOut:document.getElementById('f-lv-out').value||'17:30',
     satIn:document.getElementById('f-sat-in').value||'09:00',
     satOut:document.getElementById('f-sat-out').value||'13:30',
+    turnoChangeDate: (changeDate&&changeTo)?changeDate:null,
+    turnoChangeTo: (changeDate&&changeTo)?changeTo:null,
   };
   if(editingEmpId){ Object.assign(employees.find(e=>e.id===editingEmpId),data); }
   else { employees.push({id:nextId++,...data}); }
@@ -1248,7 +1309,7 @@ function renderReport(){
   const from=new Date(document.getElementById('rep-from').value+'T00:00:00');
   const to=new Date(document.getElementById('rep-to').value+'T00:00:00');
   const shift=document.getElementById('rep-shift').value;
-  const empList=shift?employees.filter(e=>e.turno===shift):employees;
+  const empList=shift?employees.filter(e=>effectiveTurno(e,to)===shift):employees;
 
   let title='',thead='',rows=[];
 
@@ -1282,7 +1343,7 @@ function renderReport(){
       const absCnt=Object.values(overrides).reduce((sum,dov)=>{
         const k2=dov[e.id]; return sum+(k2&&k2.status!=='normal'?1:0);
       },0);
-      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${TLIBRE[e.turno]}</td><td>${absCnt||'—'}</td></tr>`);
+      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}${turnoPendingNote(e)}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${TLIBRE[e.turno]}</td><td>${absCnt||'—'}</td></tr>`);
     });
   } else if(type==='sabados'){
     title='Calendario de Sábados Libres';
@@ -1291,8 +1352,8 @@ function renderReport(){
     while(d<=new Date(2026,11,31)){
       if(d>=from&&d<=to){
         const fg=freeGroupOnSat(d), q=quincenaOf(d), r9l=rot9LibreOnSat(d);
-        const freeG=employees.filter(e=>e.turno===fg&&(!shift||e.turno===shift));
-        const rot9=employees.filter(e=>e.turno==='ROT9');
+        const freeG=employees.filter(e=>{const et=effectiveTurno(e,d); return et===fg&&(!shift||et===shift);});
+        const rot9=employees.filter(e=>effectiveTurno(e,d)==='ROT9');
         rows.push(`<tr><td>${fmtDate(d)}</td><td>Q${q}</td><td>Grupo ${fg}</td><td>${freeG.map(e=>e.nombre).join(', ')||'—'}</td><td>${r9l?rot9.map(e=>e.nombre).join(', '):'Trabajan'}</td></tr>`);
       }
       d=new Date(d); d.setDate(d.getDate()+7);
@@ -1491,10 +1552,11 @@ function renderSatMgr(){
 
   // Helper: what is the AUTO group for an employee on this Saturday?
   function autoSlot(e){
-    if(e.turno==='FIJO') return 'work';
-    if(e.turno==='ROT9') return r9libre?'libre':'work';
-    if(e.turno===fg) return 'libre';
-    if(e.turno===wg) return 'work';
+    const et=effectiveTurno(e,satDate);
+    if(et==='FIJO') return 'work';
+    if(et==='ROT9') return r9libre?'libre':'work';
+    if(et===fg) return 'libre';
+    if(et===wg) return 'work';
     return 'work';
   }
 
