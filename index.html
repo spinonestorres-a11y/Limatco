@@ -1441,6 +1441,29 @@ function showSaveIndicator(state){
   if(state==='saved') setTimeout(()=>{el.style.opacity='0';},3000);
 }
 
+// Cambios de turno conocidos (usados solo para reparar la planilla la primera
+// vez que se conecta con el Code.gs actualizado, si a la hoja le faltan las
+// columnas turnoChangeDate/turnoChangeTo).
+const TURNO_CHANGE_DEFAULTS = {
+  'Victor Leiva':      {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  'Jesus Calderon':    {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  'Amos Altema':       {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  'Diumetre Clotaire': {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  'Ricardo Rojas':     {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
+  'Yosmic Pauldeux':   {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  'Dante Contreras':   {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+  'Juan Rivera':       {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+};
+
+// Repara datos corruptos conocidos (ej: celdas desalineadas por un guardado
+// concurrente). Devuelve true si aplicó alguna reparación.
+function repairKnownDataIssues(){
+  let repaired=false;
+  const jc=employees.find(e=>e.nombre==='Jesus Calderon');
+  if(jc&&jc.cargo==='Amos Altema'){ jc.cargo='Enc. Sector A'; repaired=true; }
+  return repaired;
+}
+
 async function loadFromSheets(){
   if(!SHEETS_URL){ loadState(); return; }
   showLoader(true,'Cargando turnos…','Conectando con Google Sheets');
@@ -1448,10 +1471,22 @@ async function loadFromSheets(){
     const r=await fetch(SHEETS_URL+'?action=getAll',{cache:'no-cache'});
     const json=await r.json();
     if(json.ok && json.data){
+      let needsMigration=false;
       if(json.data.empleados && json.data.empleados.length){
         employees=json.data.empleados.map(e=>({
           ...e, id:parseInt(e.id)
         }));
+        // Migración: si la hoja aún no tiene las columnas de cambio de turno
+        // (esquema viejo), aplicamos los valores conocidos y marcamos para re-guardar.
+        employees.forEach(e=>{
+          if(e.turnoChangeDate===undefined){
+            needsMigration=true;
+            const def=TURNO_CHANGE_DEFAULTS[e.nombre];
+            e.turnoChangeDate = def ? def.turnoChangeDate : null;
+            e.turnoChangeTo   = def ? def.turnoChangeTo   : null;
+          }
+        });
+        if(repairKnownDataIssues()) needsMigration=true;
         nextId=Math.max(...employees.map(e=>e.id))+1;
       }
       overrides={};
@@ -1459,6 +1494,10 @@ async function loadFromSheets(){
         if(!overrides[a.dateKey]) overrides[a.dateKey]={};
         overrides[a.dateKey][parseInt(a.empId)]={status:a.status,note:a.note||''};
       });
+      if(needsMigration){
+        console.log('Migrando/reparando datos en Google Sheets…');
+        doSaveToSheets();
+      }
     }
   }catch(err){
     console.warn('Sheets load error — usando localStorage como respaldo:',err.message);
