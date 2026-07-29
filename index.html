@@ -1455,6 +1455,32 @@ const TURNO_CHANGE_DEFAULTS = {
   'Juan Rivera':       {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
 };
 
+// Mapa de los IDs ORIGINALES (1-26, con los que se creó la app) a nombre.
+// Se usa para reparar ausencias/overrides guardados con esos IDs viejos,
+// que ya no coinciden con los IDs actuales de los empleados (los IDs se
+// corren cada vez que se agrega o elimina a alguien).
+const LEGACY_ID_TO_NAME = {
+  1:'Marcelo Piñones', 2:'Brayan Sevilla', 3:'Sebastian Guevara', 4:'James Jean',
+  5:'Lisandro Maragaño', 6:'Marlon Otiniano', 7:'Patricio Lienlaf', 8:'Victor Leiva',
+  9:'Jesus Calderon', 10:'Amos Altema', 11:'Diumetre Clotaire', 12:'Ricardo Rojas',
+  13:'Yosmic Pauldeux', 14:'Dante Contreras', 15:'Juan Rivera', 16:'Felipe Palma',
+  17:'Alberto Collao', 18:'Segundo Martinez', 19:'Juan Rojas', 20:'Jose Vasquez',
+  21:'Edgar Baldera', 22:'Danilo Paredes', 23:'Bastian Carrasco', 24:'Anderson Polo',
+  25:'Gilmer Alvarez', 26:'Domingo Querales',
+};
+
+// Dado un empId guardado en Sheets, devuelve el ID ACTUAL del empleado
+// correspondiente (si el empId ya no existe pero coincide con un ID legado
+// conocido). Si no puede resolverlo, devuelve null.
+function resolveCurrentEmpId(rawEmpId){
+  const id=parseInt(rawEmpId);
+  if(employees.some(e=>e.id===id)) return id; // ya es válido, sin cambios
+  const legacyName=LEGACY_ID_TO_NAME[id];
+  if(!legacyName) return null;
+  const match=employees.find(e=>e.nombre===legacyName);
+  return match?match.id:null;
+}
+
 // Repara datos corruptos conocidos (ej: celdas desalineadas por un guardado
 // concurrente). Devuelve true si aplicó alguna reparación.
 function repairKnownDataIssues(){
@@ -1491,8 +1517,20 @@ async function loadFromSheets(){
       }
       overrides={};
       (json.data.ausencias||[]).forEach(a=>{
-        if(!overrides[a.dateKey]) overrides[a.dateKey]={};
-        overrides[a.dateKey][parseInt(a.empId)]={status:a.status,note:a.note||''};
+        let dk=a.dateKey;
+        // Si el dateKey vino corrupto (Code.gs viejo convirtió la fecha en un
+        // Date y la volcó como texto tipo "Sat Aug 01 2026 00:00:00 GMT..."),
+        // intentamos recuperarla parseándola de nuevo, en vez de perderla.
+        if(!dk||!/^\d{4}-\d{2}-\d{2}$/.test(dk)){
+          const parsed=new Date(dk);
+          if(dk&&!isNaN(parsed.getTime())){ dk=dateKey(parsed); needsMigration=true; }
+          else { needsMigration=true; return; } // irrecuperable, se descarta
+        }
+        const empId=resolveCurrentEmpId(a.empId);
+        if(empId===null){ needsMigration=true; return; } // empleado ya no existe ni tiene mapeo legado
+        if(parseInt(a.empId)!==empId) needsMigration=true; // se remapeó un ID legado → hay que re-guardar
+        if(!overrides[dk]) overrides[dk]={};
+        overrides[dk][empId]={status:a.status,note:a.note||''};
       });
       if(needsMigration){
         console.log('Migrando/reparando datos en Google Sheets…');
