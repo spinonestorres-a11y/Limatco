@@ -1494,7 +1494,12 @@ async function loadFromSheets(){
   if(!SHEETS_URL){ loadState(); return; }
   showLoader(true,'Cargando turnos…','Conectando con Google Sheets');
   try{
-    const r=await fetch(SHEETS_URL+'?action=getAll',{cache:'no-cache'});
+    // Si Google Sheets no responde en 15s, abortamos y usamos el respaldo local
+    // en vez de dejar la app cargando para siempre.
+    const ctrl=new AbortController();
+    const timeoutId=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch(SHEETS_URL+'?action=getAll',{cache:'no-cache',signal:ctrl.signal});
+    clearTimeout(timeoutId);
     const json=await r.json();
     if(json.ok && json.data){
       let needsMigration=false;
@@ -1533,8 +1538,17 @@ async function loadFromSheets(){
         overrides[dk][empId]={status:a.status,note:a.note||''};
       });
       if(needsMigration){
-        console.log('Migrando/reparando datos en Google Sheets…');
-        doSaveToSheets();
+        // Límite de seguridad: no reintentar la migración más de una vez cada
+        // 60s, para no saturar el Apps Script si varias pestañas/dispositivos
+        // cargan la app al mismo tiempo con datos aún sin migrar.
+        const lastAttempt=parseInt(localStorage.getItem('limatco_migration_attempt')||'0');
+        if(Date.now()-lastAttempt>60000){
+          localStorage.setItem('limatco_migration_attempt', String(Date.now()));
+          console.log('Migrando/reparando datos en Google Sheets…');
+          doSaveToSheets();
+        } else {
+          console.log('Migración pendiente, esperando antes de reintentar (evita saturar Sheets)…');
+        }
       }
     }
   }catch(err){
@@ -1562,14 +1576,26 @@ async function doSaveToSheets(){
   });
   try{
     showSaveIndicator('saving');
-    // Encode payload as base64 to avoid URL length issues
+    // Se envía por POST (cuerpo de la petición), no por GET con todo
+    // codificado en la URL: con ~25 empleados esa URL superaba los 8KB
+    // que soporta Apps Script y el guardado fallaba silenciosamente
+    // ("Failed to fetch" / Error al guardar).
     const payload={empleados:employees, ausencias};
-    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    const url=SHEETS_URL+'?action=saveAll&data='+encodeURIComponent(encoded);
-    const r=await fetch(url,{cache:'no-cache'});
+    const ctrl=new AbortController();
+    const timeoutId=setTimeout(()=>ctrl.abort(),20000);
+    const r=await fetch(SHEETS_URL,{
+      method:'POST',
+      cache:'no-cache',
+      signal:ctrl.signal,
+      // text/plain evita el preflight CORS (Apps Script no responde bien a OPTIONS)
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)
+    });
+    clearTimeout(timeoutId);
     const json=await r.json();
     showSaveIndicator(json.ok?'saved':'error');
     if(json.ok) saveState(); // sync localStorage backup
+    else console.warn('Sheets save rejected:', json.error);
   }catch(err){
     console.warn('Sheets save error:',err.message);
     showSaveIndicator('error');
