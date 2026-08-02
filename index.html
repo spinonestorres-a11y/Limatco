@@ -437,7 +437,8 @@ tr:hover td{background:#f8fafc;}
     <select class="sel" id="cal-filter-shift" onchange="renderCalendar()">
       <option value="">Todos los turnos</option>
       <option value="FIJO">Turno Fijo</option>
-      <option value="ROT9">Rotativos</option>
+      <option value="POOL1">Pool 1</option>
+      <option value="POOL2">Pool 2</option>
       <option value="A">Grupo A</option>
       <option value="B">Grupo B</option>
     </select>
@@ -489,10 +490,11 @@ tr:hover td{background:#f8fafc;}
       <input type="text" class="inp" id="emp-search" placeholder="🔍 Buscar nombre o cargo…" oninput="renderTable()" style="flex:1;min-width:180px">
       <select class="sel" id="emp-filter-turno" onchange="renderTable()">
         <option value="">Todos los turnos</option>
-        <option value="FIJO">Turno Fijo 09:00</option>
-        <option value="ROT9">Rotativo 09↔10:30</option>
-        <option value="A">Grupo A 10:30</option>
-        <option value="B">Grupo B 10:30</option>
+        <option value="FIJO">Turno Fijo</option>
+        <option value="POOL1">Pool 1</option>
+        <option value="POOL2">Pool 2</option>
+        <option value="A">Grupo A</option>
+        <option value="B">Grupo B</option>
       </select>
       <button class="btn btn-success" onclick="openEmpModal()">+ Agregar empleado</button>
       <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
@@ -528,8 +530,9 @@ tr:hover td{background:#f8fafc;}
       <label>Turno</label>
       <select class="sel" id="rep-shift" onchange="renderReport()">
         <option value="">Todos</option>
-        <option value="FIJO">Fijo 09:00</option>
-        <option value="ROT9">Rotativo</option>
+        <option value="FIJO">Fijo</option>
+        <option value="POOL1">Pool 1</option>
+        <option value="POOL2">Pool 2</option>
         <option value="A">Grupo A</option>
         <option value="B">Grupo B</option>
       </select>
@@ -580,9 +583,15 @@ tr:hover td{background:#f8fafc;}
       <label>Tipo de turno</label>
       <select id="f-turno" onchange="updateEmpInfo()">
         <option value="FIJO">Turno Fijo · 09:00–17:30 (sin sábado libre)</option>
-        <option value="ROT9">Turno Rotativo · 09:00↔10:30 (alterna c/quincena)</option>
-        <option value="A">10:30–19:00 · Grupo A (sábado libre alterno)</option>
-        <option value="B">10:30–19:00 · Grupo B (sábado libre alterno)</option>
+        <option value="A">Grupo A (sábado libre alterno cuando su pool está en 10:30)</option>
+        <option value="B">Grupo B (sábado libre alterno cuando su pool está en 10:30)</option>
+      </select>
+    </div>
+    <div class="fr" id="f-pool-wrap">
+      <label>Pool (alterna 09:00↔10:30 cada quincena)</label>
+      <select id="f-pool">
+        <option value="1">Pool 1</option>
+        <option value="2">Pool 2</option>
       </select>
     </div>
     <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:12px;">
@@ -594,22 +603,6 @@ tr:hover td{background:#f8fafc;}
       <div class="fr-row">
         <div class="fr"><label>Entrada Sábado</label><input type="time" id="f-sat-in" placeholder="09:00"></div>
         <div class="fr"><label>Salida Sábado</label><input type="time" id="f-sat-out" placeholder="13:30"></div>
-      </div>
-    </div>
-    <div style="background:#fff8f8;border-radius:8px;padding:12px;margin-bottom:12px;border:1px solid #fecaca;">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#991b1b;margin-bottom:8px;">🔄 Cambio de turno programado (opcional)</div>
-      <p style="font-size:11px;color:#64748b;margin-bottom:8px;">Úsalo cuando un empleado deba pasar a otro turno en una fecha futura (ej: de Rotativo a Grupo A). El cambio se aplica automáticamente ese día en adelante.</p>
-      <div class="fr-row">
-        <div class="fr"><label>Fecha del cambio</label><input type="date" id="f-change-date"></div>
-        <div class="fr"><label>Turno desde esa fecha</label>
-          <select id="f-change-to">
-            <option value="">— Sin cambio programado —</option>
-            <option value="FIJO">Turno Fijo 09:00</option>
-            <option value="ROT9">Rotativo 09↔10:30</option>
-            <option value="A">Grupo A · 10:30</option>
-            <option value="B">Grupo B · 10:30</option>
-          </select>
-        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -639,33 +632,44 @@ tr:hover td{background:#f8fafc;}
 // ══════════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════════
+// MODELO DE TURNOS (actualizado según planilla "Turno sábados libres"):
+// - FIJO: 6 personas, Lun-Vie 09:00-17:30, Sábado 09:00-13:30 fijo. Nunca libre.
+// - Los 19 restantes ("rotativos") forman 2 POOLS que se turnan el horario
+//   09:00 <-> 10:30 CADA QUINCENA (cuando un pool está en 09:00, trabaja TODOS
+//   los sábados sin excepción; cuando está en 10:30, se subdivide en A/B y
+//   se turnan el sábado libre semana por semana, igual que antes).
+//   · pool 1 (8 personas, los "rotativos" originales)
+//   · pool 2 (11 personas, los antiguos "Grupo A/B" permanentes)
+// - turno 'A'/'B' = subgrupo dentro de su pool, define qué sábado libran
+//   cuando su pool está en el turno de 10:30.
 let employees = [
-  {id:1,  nombre:'Marcelo Piñones',   cargo:'Jefe Operaciones',  turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:00'},
-  {id:2,  nombre:'Brayan Sevilla',    cargo:'Enc. de Valija',    turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:3,  nombre:'Sebastian Guevara', cargo:'Fletes',            turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:4,  nombre:'James Jean',        cargo:'2° Sector A',       turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:5,  nombre:'Lisandro Maragaño', cargo:'Vigía',             turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
-  {id:6,  nombre:'Marlon Otiniano',   cargo:'Apoyo Despacho',    turno:'FIJO', lvIn:'10:00',lvOut:'18:30',satIn:'09:30',satOut:'14:00'},
-  {id:7,  nombre:'Patricio Lienlaf',  cargo:'Operador de Grúa',  turno:'FIJO', lvIn:'09:00',lvOut:'17:00',satIn:'08:30',satOut:'13:00'},
-  {id:8,  nombre:'Victor Leiva',      cargo:'Operador de Grúa',  turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  {id:9,  nombre:'Jesus Calderon',    cargo:'Enc. Sector A',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  {id:10, nombre:'Amos Altema',       cargo:'Enc. Sector B',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  {id:11, nombre:'Diumetre Clotaire', cargo:'Enc. Sector C',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  {id:12, nombre:'Ricardo Rojas',     cargo:'Enc. Sector D',     turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  {id:13, nombre:'Yosmic Pauldeux',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  {id:14, nombre:'Dante Contreras',   cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  {id:15, nombre:'Juan Rivera',       cargo:'Apoyo Despacho',    turno:'ROT9', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30', turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  {id:16, nombre:'Felipe Palma',      cargo:'Apoyo Despacho',    turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:17, nombre:'Alberto Collao',    cargo:'Operador de Grúa',  turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:18, nombre:'Segundo Martinez',  cargo:'2° Sector D',       turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:19, nombre:'Juan Rojas',        cargo:'Apoyo Despacho',    turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:20, nombre:'Jose Vasquez',      cargo:'Acopios N°1-2',     turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:21, nombre:'Edgar Baldera',     cargo:'Apoyo 2° Sector A', turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:22, nombre:'Danilo Paredes',    cargo:'Operador de Grúa',  turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:23, nombre:'Bastian Carrasco',  cargo:'Despacho',          turno:'B',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:24, nombre:'Anderson Polo',     cargo:'2° Sector C',       turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:25, nombre:'Gilmer Alvarez',    cargo:'2° Sector B',       turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
-  {id:26, nombre:'Domingo Querales',  cargo:'Apoyo Despacho',    turno:'A',    lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:1,  nombre:'Brayan Sevilla',    cargo:'Enc. de Valija',    turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:2,  nombre:'Sebastian Guevara', cargo:'Fletes',            turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:3,  nombre:'James Jean',        cargo:'2° Sector A',       turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:4,  nombre:'Lisandro Maragaño', cargo:'Vigía',             turno:'FIJO', lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:5,  nombre:'Marlon Otiniano',   cargo:'Apoyo Despacho',    turno:'FIJO', lvIn:'10:00',lvOut:'18:30',satIn:'09:30',satOut:'14:00'},
+  {id:6,  nombre:'Patricio Lienlaf',  cargo:'Operador de Grúa',  turno:'FIJO', lvIn:'09:00',lvOut:'17:00',satIn:'08:30',satOut:'13:00'},
+  // ── Pool 1 (8 personas) ──
+  {id:7,  nombre:'Jesus Calderon',    cargo:'Enc. Sector A',     turno:'A', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:8,  nombre:'Amos Altema',       cargo:'Enc. Sector B',     turno:'A', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:9,  nombre:'Diumetre Clotaire', cargo:'Enc. Sector C',     turno:'A', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:10, nombre:'Ricardo Rojas',     cargo:'Enc. Sector D',     turno:'A', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:11, nombre:'Victor Leiva',      cargo:'Operador de Grúa',  turno:'B', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:12, nombre:'Yosmic Pauldeux',   cargo:'Apoyo Despacho',    turno:'B', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:13, nombre:'Dante Contreras',   cargo:'Apoyo Despacho',    turno:'B', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  {id:14, nombre:'Juan Rivera',       cargo:'Apoyo Despacho',    turno:'B', pool:1, lvIn:'09:00',lvOut:'17:30',satIn:'09:00',satOut:'13:30'},
+  // ── Pool 2 (11 personas) ──
+  {id:15, nombre:'Segundo Martinez',  cargo:'2° Sector D',       turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:16, nombre:'Edgar Baldera',     cargo:'Apoyo 2° Sector A', turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:17, nombre:'Danilo Paredes',    cargo:'Operador de Grúa',  turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:18, nombre:'Anderson Polo',     cargo:'2° Sector C',       turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:19, nombre:'Gilmer Alvarez',    cargo:'2° Sector B',       turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:20, nombre:'Domingo Querales',  cargo:'Apoyo Despacho',    turno:'A', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:21, nombre:'Felipe Palma',      cargo:'Apoyo Despacho',    turno:'B', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:22, nombre:'Alberto Collao',    cargo:'Operador de Grúa',  turno:'B', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:23, nombre:'Juan Rojas',        cargo:'Apoyo Despacho',    turno:'B', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:24, nombre:'Jose Vasquez',      cargo:'Acopios N°1-2',     turno:'B', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
+  {id:25, nombre:'Bastian Carrasco',  cargo:'Despacho',          turno:'B', pool:2, lvIn:'10:30',lvOut:'19:00',satIn:'09:30',satOut:'14:00'},
 ];
 let nextId = 27, editingEmpId = null;
 
@@ -681,22 +685,17 @@ const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto
 const DAYS   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
 function quincenaOf(d){ return Math.floor(Math.round((d-Q_BASE)/864e5)/15)+1; }
+// Subgrupo (A/B) que libra este sábado específico — aplica dentro de
+// cualquiera de los 2 pools que esté en el turno de 10:30 esa quincena.
 function freeGroupOnSat(d){ const i=Math.round((d-SAT_ANCHOR)/(7*864e5)); return i%2===0?'A':'B'; }
-function rot9On1030(q){ return q%2===0; }
-function rot9LibreOnSat(d){ return rot9On1030(quincenaOf(d)); }
+// Pool 1 (8 personas) está en 10:30 en quincenas pares; Pool 2 (11 personas)
+// hace exactamente lo opuesto — cuando uno está en 09:00 el otro está en 10:30.
+function pool1On1030(q){ return q%2===0; }
+function poolOn1030(pool,q){ return pool===1 ? pool1On1030(q) : !pool1On1030(q); }
+
 function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(d){ return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; }
 function todayDate(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
-
-// Returns the turno that actually applies to employee e on a given date,
-// accounting for a scheduled future turno change (turnoChangeDate/turnoChangeTo).
-function effectiveTurno(e, date){
-  if(e.turnoChangeDate){
-    const cd=new Date(e.turnoChangeDate+'T00:00:00');
-    if(date>=cd) return e.turnoChangeTo;
-  }
-  return e.turno;
-}
 
 function getOverride(date, empId){
   const k=dateKey(date);
@@ -729,35 +728,46 @@ function statusBadge(s){
   return '';
 }
 
-// Get effective groups for a day
+// Filtro genérico usado en Calendario/Empleados/Reportes:
+// '' = todos, FIJO, POOL1, POOL2 (por pool), A/B (por subgrupo)
+function matchesFilter(e, val){
+  if(!val) return true;
+  if(val==='FIJO') return e.turno==='FIJO';
+  if(val==='POOL1') return e.pool===1;
+  if(val==='POOL2') return e.pool===2;
+  if(val==='A') return e.turno==='A';
+  if(val==='B') return e.turno==='B';
+  return true;
+}
+
+// Devuelve {g09,g10,gLibre,...} — quiénes trabajan en 09:00, quiénes en 10:30
+// y quiénes libran, para una fecha dada.
 function getGroups(date){
   const q=quincenaOf(date), isSat=date.getDay()===6;
-  const r9on10=rot9On1030(q), r9libre=isSat&&rot9LibreOnSat(date);
   const fg=isSat?freeGroupOnSat(date):null, wg=fg==='A'?'B':'A';
+  const pool1On10=poolOn1030(1,q), pool2On10=poolOn1030(2,q);
   const g09=[], g10=[], gLibre=[];
   employees.forEach(e=>{
     if(isAbsent(date,e.id)) return;
-    const et=effectiveTurno(e,date);
+    if(e.turno==='FIJO'){ g09.push(e); return; }
+    const on10 = e.pool===1 ? pool1On10 : pool2On10;
     if(isSat){
-      // Base slot from rotation rules
-      let slot='none'; // '09' | '10' | 'libre'
-      if(et==='FIJO') slot='09';
-      else if(et==='ROT9') slot=r9libre?'libre':'09';
-      else if(et===fg) slot='libre';
-      else if(et===wg) slot='10';
-      // Apply manual sat overrides
+      // Slot base: si el pool no está en 10:30 esta quincena, trabaja
+      // el sábado igual (sin libre); si está en 10:30, el subgrupo A/B
+      // define quién libra esta semana en particular.
+      let slot = !on10 ? '09' : (e.turno===fg ? 'libre' : '10');
+      // Overrides manuales (Gestionar sábado libre)
       const ov=getOverride(date,e.id);
       if(ov&&ov.status==='libresabado') slot='libre';
-      if(ov&&ov.status==='trabajasabado') slot=(et==='FIJO'||et==='ROT9')?'09':'10';
+      if(ov&&ov.status==='trabajasabado') slot = on10 ? '10' : '09';
       if(slot==='09') g09.push(e);
       else if(slot==='10') g10.push(e);
-      else if(slot==='libre') gLibre.push(e);
+      else gLibre.push(e);
     } else {
-      if(et==='FIJO'||(et==='ROT9'&&!r9on10)) g09.push(e);
-      else g10.push(e);
+      if(on10) g10.push(e); else g09.push(e);
     }
   });
-  return {g09,g10,gLibre,q,r9on10,r9libre,fg,wg};
+  return {g09,g10,gLibre,q,fg,wg,pool1On10,pool2On10};
 }
 
 function getAbsentToday(date){
@@ -788,7 +798,7 @@ document.querySelectorAll('.tab').forEach(t=>{
 // ══════════════════════════════════════════════
 function renderDashboard(){
   const today=todayDate();
-  const {g09,g10,gLibre,q,r9on10}=getGroups(today);
+  const {g09,g10,gLibre,q,pool1On10,pool2On10}=getGroups(today);
   const absents=getAbsentToday(today);
   const isSat=today.getDay()===6, isSun=today.getDay()===0;
   const isWork=!isSun;
@@ -796,31 +806,22 @@ function renderDashboard(){
   // Header
   document.getElementById('dash-today-hdr').innerHTML=`
     <h2>Hoy es ${DAYS[today.getDay()]} ${today.getDate()} de ${MONTHS[today.getMonth()]} ${today.getFullYear()}</h2>
-    <p>Quincena N° ${q} · Rotativos en turno <strong>${r9on10?'10:30–19:00':'09:00–17:30'}</strong>${isSat?' · Día sábado':isSun?' · Domingo (no laborable)':''}</p>`;
+    <p>Quincena N° ${q} · Pool 1 en turno <strong>${pool1On10?'10:30–19:00':'09:00–17:30'}</strong> · Pool 2 en turno <strong>${pool2On10?'10:30–19:00':'09:00–17:30'}</strong>${isSat?' · Día sábado':isSun?' · Domingo (no laborable)':''}</p>`;
 
   // Stats
-  const totalWork=g09.length+g10.length+(isSat?0:0);
   document.getElementById('dash-stats').innerHTML=`
     <div class="sc blue"><div class="sc-num">${employees.length}</div><div class="sc-label">Total empleados</div></div>
     <div class="sc green"><div class="sc-num">${isWork?(g09.length+g10.length+(isSat?gLibre.length:0)):0}</div><div class="sc-label">Presentes hoy</div></div>
     <div class="sc amber"><div class="sc-num">${isSat?gLibre.length:0}</div><div class="sc-label">Sáb. libre hoy</div></div>
     <div class="sc red"><div class="sc-num">${absents.length}</div><div class="sc-label">Ausencias registradas</div></div>
-    <div class="sc purple"><div class="sc-num">${employees.filter(e=>['A','B'].includes(effectiveTurno(e,today))).length}</div><div class="sc-label">Con beneficio sáb.</div></div>
-    <div class="sc cyan"><div class="sc-num">${employees.filter(e=>effectiveTurno(e,today)==='ROT9').length}</div><div class="sc-label">Turno rotativo</div></div>`;
+    <div class="sc purple"><div class="sc-num">${employees.filter(e=>e.pool===1).length}</div><div class="sc-label">Pool 1</div></div>
+    <div class="sc cyan"><div class="sc-num">${employees.filter(e=>e.pool===2).length}</div><div class="sc-label">Pool 2</div></div>`;
 
-  // Left column — today's shifts
-  const empRows=(arr)=>arr.map(e=>{
-    const ov=getOverride(today,e.id);
-    const badge=ov&&ov.status!=='normal'?statusBadge(ov.status):'';
-    const dot=`<span class="dot dot-${e.turno==='ROT9'?'rot9':e.turno==='FIJO'?'fijo':'a'?'a':'b'}"></span>`;
-    return `<div class="emp-row">${dot}<span>${e.nombre}</span><span style="font-size:11px;color:#94a3b8">${e.cargo}</span>${badge}</div>`;
-  }).join('');
-
-  // Fix the dot selector
+  // Fila de empleado, con el punto de color según su turno/pool
   const empRowsFixed=(arr)=>arr.map(e=>{
     const ov=getOverride(today,e.id);
     const badge=ov&&ov.status!=='normal'?statusBadge(ov.status):'';
-    const dotColor={FIJO:'#7c3aed',ROT9:'#0891b2',A:'#059669',B:'#dc2626'}[effectiveTurno(e,today)]||'#94a3b8';
+    const dotColor= e.turno==='FIJO' ? '#7c3aed' : (e.turno==='A' ? '#059669' : '#dc2626');
     return `<div class="emp-row"><div class="dot" style="background:${dotColor}"></div><span style="flex:1">${e.nombre}</span><span style="font-size:10px;color:#94a3b8">${e.cargo}</span>${badge}</div>`;
   }).join('');
 
@@ -838,12 +839,12 @@ function renderDashboard(){
   let d=new Date(today); if(d.getDay()!==6) while(d.getDay()!==6) d.setDate(d.getDate()+1);
   for(let i=0;i<8;i++){
     if(d>new Date(2026,11,31)) break;
-    const fg=freeGroupOnSat(d), r9l=rot9LibreOnSat(d);
-    const r9Count=employees.filter(e=>effectiveTurno(e,d)==='ROT9').length;
-    const libreCount=employees.filter(e=>effectiveTurno(e,d)===fg).length+(r9l?r9Count:0);
+    const q2=quincenaOf(d), fg=freeGroupOnSat(d);
+    const poolOn10 = poolOn1030(1,q2) ? 1 : 2;
+    const libreCount=employees.filter(e=>e.pool===poolOn10&&e.turno===fg).length;
     nextSats+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
       <span style="font-weight:700">${fmtDate(d)}</span>
-      <span style="color:#065f46;font-weight:700">Libre: Grupo ${fg}${r9l?' + Rot.':''} (${libreCount})</span>
+      <span style="color:#065f46;font-weight:700">Libre: Grupo ${fg} · Pool ${poolOn10} (${libreCount})</span>
     </div>`;
     d=new Date(d); d.setDate(d.getDate()+7);
   }
@@ -943,30 +944,28 @@ function renderCalendar(){
 
     let content='';
     if(inRange&&!isSun){
-      const q=quincenaOf(date); const r9on10=rot9On1030(q);
+      const {g09,g10,gLibre,q,fg}=getGroups(date);
       if(isSat){
-        const fg=freeGroupOnSat(date), r9l=rot9LibreOnSat(date);
-        if(!filterShift||filterShift===fg||filterShift==='ROT9'||filterShift==='FIJO'){
+        const libreF=filterShift?gLibre.filter(e=>matchesFilter(e,filterShift)):gLibre;
+        const anyMatch=!filterShift||g09.some(e=>matchesFilter(e,filterShift))||g10.some(e=>matchesFilter(e,filterShift))||gLibre.some(e=>matchesFilter(e,filterShift));
+        if(anyMatch){
           content=`<div class="cc-content">
             <span class="cpill cpill-q">Q${q}</span>
-            ${!filterShift||filterShift===fg?`<span class="cpill cpill-sat-${fg==='A'?'a':'b'}">🟢 Libre: Gpo ${fg}</span>`:''}
-            ${!filterShift||filterShift==='ROT9'?`<span class="cpill ${r9l?'cpill-rot-libre':'cpill-rot-work'}">${r9l?'🔵 Rot.libre':'🟣 Rot.trabaja'}</span>`:''}
-            ${!filterShift||filterShift==='FIJO'?`<span class="cpill cpill-fijo">⚪ Fijo trabaja</span>`:''}
+            ${libreF.length?`<span class="cpill cpill-sat-${fg==='A'?'a':'b'}">🟢 Libre: Gpo ${fg} (${libreF.length})</span>`:''}
+            ${!filterShift?`<span class="cpill cpill-fijo">⚪ Resto trabaja</span>`:''}
           </div>`;
         }
       } else {
-        const empF=filterShift?employees.filter(e=>effectiveTurno(e,date)===filterShift):null;
-        const g09cnt=employees.filter(e=>{const et=effectiveTurno(e,date); return et==='FIJO'||(et==='ROT9'&&!r9on10);}).length;
-        const g10cnt=employees.filter(e=>{const et=effectiveTurno(e,date); return et==='A'||et==='B'||(et==='ROT9'&&r9on10);}).length;
+        const empF=filterShift?[...g09,...g10].filter(e=>matchesFilter(e,filterShift)):null;
         if(!filterShift){
           content=`<div class="cc-content">
             <span class="cpill cpill-q">Q${q}</span>
-            <span class="cpill cpill-09">09:00 · ${g09cnt} pers.</span>
-            <span class="cpill cpill-10">10:30 · ${g10cnt} pers.</span>
+            <span class="cpill cpill-09">09:00 · ${g09.length} pers.</span>
+            <span class="cpill cpill-10">10:30 · ${g10.length} pers.</span>
           </div>`;
         } else {
-          const shown=empF?empF.slice(0,2).map(e=>e.nombre.split(' ')[0]).join(', '):'';
-          const extra=empF&&empF.length>2?` +${empF.length-2}`:'';
+          const shown=empF.slice(0,2).map(e=>e.nombre.split(' ')[0]).join(', ');
+          const extra=empF.length>2?` +${empF.length-2}`:'';
           content=`<div class="cc-content">
             <span class="cpill cpill-q">Q${q}</span>
             <span class="cpill cpill-09" style="font-size:9px">${shown}${extra}</span>
@@ -987,20 +986,16 @@ function renderCalendar(){
 let currentDayDate=null;
 function showDayDetail(date){
   currentDayDate=date; selectedDate=date; renderCalendar();
-  const q=quincenaOf(date), isSat=date.getDay()===6;
-  const r9on10=rot9On1030(q), r9l=isSat&&rot9LibreOnSat(date);
-  const fg=isSat?freeGroupOnSat(date):null, wg=fg==='A'?'B':'A';
-  const absents=getAbsentToday(date);
+  const isSat=date.getDay()===6;
+  const {g09,g10,gLibre,q,fg,wg,pool1On10,pool2On10}=getGroups(date);
+  const poolOn10Num=pool1On10?1:2, poolOn09Num=pool1On10?2:1;
 
   document.getElementById('dp-title').textContent=`${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
   document.getElementById('dp-sat-btn').style.display=isSat?'inline-flex':'none';
-  const r9lbl=r9on10?'Rotativo en turno 10:30':'Rotativo en turno 09:00';
-  document.getElementById('dp-sublabel').textContent=`Quincena N° ${q} · ${r9lbl}${isSat?` · Grupo ${fg} tiene sábado libre`:''}`;
+  document.getElementById('dp-sublabel').textContent=`Quincena N° ${q} · Pool ${poolOn10Num} en 10:30 · Pool ${poolOn09Num} en 09:00${isSat?` · Grupo ${fg} tiene sábado libre`:''}`;
 
-  const fijos=employees.filter(e=>effectiveTurno(e,date)==='FIJO');
-  const rot9=employees.filter(e=>effectiveTurno(e,date)==='ROT9');
-  const grpA=employees.filter(e=>effectiveTurno(e,date)==='A');
-  const grpB=employees.filter(e=>effectiveTurno(e,date)==='B');
+  const fijos=g09.filter(e=>e.turno==='FIJO');
+  const poolOn09=g09.filter(e=>e.turno!=='FIJO');
 
   const chip=(e,cls)=>{
     const ov=getOverride(date,e.id);
@@ -1012,25 +1007,17 @@ function showDayDetail(date){
 
   let body='';
   if(isSat){
-    const libreG=employees.filter(e=>effectiveTurno(e,date)===fg);
-    const workG=employees.filter(e=>effectiveTurno(e,date)===wg);
-    const workCnt=fijos.length+(r9l?0:rot9.length)+workG.length;
-    const libreCnt=libreG.length+(r9l?rot9.length:0);
+    const workCnt=fijos.length+poolOn09.length+g10.length;
+    const libreCnt=gLibre.length;
     let w=`<div class="sublbl">Turno Fijo · ${fijos[0]?.satIn||'09:00'}–${fijos[0]?.satOut||'13:30'}</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
-    if(!r9l) w+=`<div class="sublbl">Rotativo (Q${q} en 09:00) · 09:00–13:30</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
-    w+=`<div class="sublbl">Grupo ${wg} · 10:30–19:00 · Sáb 09:30–14:00</div><div class="dp-chips">${workG.map(e=>chip(e,'dpc-b')).join('')}</div>`;
-    let l=`<div class="sublbl">Grupo ${fg} · Sábado LIBRE</div><div class="dp-chips">${libreG.map(e=>chip(e,'dpc-a')).join('')}</div>`;
-    if(r9l) l+=`<div class="sublbl">Rotativo (Q${q} en 10:30) — sábado libre</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
+    w+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) — sin libre · ${poolOn09[0]?.satIn||'09:30'}–${poolOn09[0]?.satOut||'14:00'}</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
+    w+=`<div class="sublbl">Pool ${poolOn10Num} · Grupo ${wg} · 10:30–19:00 · Sáb ${g10[0]?.satIn||'09:30'}–${g10[0]?.satOut||'14:00'}</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-b')).join('')}</div>`;
+    let l=`<div class="sublbl">Pool ${poolOn10Num} · Grupo ${fg} · Sábado LIBRE</div><div class="dp-chips">${gLibre.map(e=>chip(e,'dpc-a')).join('')}</div>`;
     body=`<div class="dp-section work09"><h4>⚙️ Trabajan (${workCnt})</h4>${w}</div><div class="dp-section libre"><h4>🎉 Libre (${libreCnt})</h4>${l}</div>`;
   } else {
-    const g09=[...fijos,...(r9on10?[]:rot9)];
-    const g10=[...(r9on10?rot9:[]),...grpA,...grpB];
     let h09=`<div class="sublbl">Turno Fijo · 09:00–17:30</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
-    if(!r9on10) h09+=`<div class="sublbl">Rotativo (Q${q} en 09:00) · 09:00–17:30</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
-    let h10='';
-    if(r9on10) h10+=`<div class="sublbl">Rotativo (Q${q} en 10:30) · 10:30–19:00</div><div class="dp-chips">${rot9.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
-    h10+=`<div class="sublbl">Grupo A · 10:30–19:00</div><div class="dp-chips">${grpA.map(e=>chip(e,'dpc-a')).join('')}</div>`;
-    h10+=`<div class="sublbl">Grupo B · 10:30–19:00</div><div class="dp-chips">${grpB.map(e=>chip(e,'dpc-b')).join('')}</div>`;
+    h09+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) · 09:00–17:30</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
+    let h10=`<div class="sublbl">Pool ${poolOn10Num} (Q${q} en 10:30) · 10:30–19:00</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
     body=`<div class="dp-section work09"><h4>🟣 09:00–17:30 (${g09.length})</h4>${h09}</div><div class="dp-section work10"><h4>🔵 10:30–19:00 (${g10.length})</h4>${h10}</div>`;
   }
   document.getElementById('dp-body').innerHTML=body;
@@ -1052,10 +1039,9 @@ function openOverrideForDate(date){
   document.getElementById('day-modal-title').textContent=`Editar: ${DAYS[date.getDay()]} ${date.getDate()} de ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 
   const groups=[
-    {label:'Turno Fijo 09:00',emps:employees.filter(e=>effectiveTurno(e,date)==='FIJO')},
-    {label:'Turno Rotativo',emps:employees.filter(e=>effectiveTurno(e,date)==='ROT9')},
-    {label:'Grupo A · 10:30',emps:employees.filter(e=>effectiveTurno(e,date)==='A')},
-    {label:'Grupo B · 10:30',emps:employees.filter(e=>effectiveTurno(e,date)==='B')},
+    {label:'Turno Fijo',emps:employees.filter(e=>e.turno==='FIJO')},
+    {label:'Pool 1',emps:employees.filter(e=>e.pool===1)},
+    {label:'Pool 2',emps:employees.filter(e=>e.pool===2)},
   ];
 
   let html='<thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th><th>Nota</th></tr></thead><tbody>';
@@ -1122,63 +1108,47 @@ function renderQuincenas(){
     if(filterMonth&&q.start.getMonth()!==parseInt(filterMonth)&&q.end.getMonth()!==parseInt(filterMonth)) return;
     // Usamos el fin de la quincena como fecha de referencia para agrupar
     // (así una quincena que incluye un cambio de turno muestra la asignación vigente en su mayor parte)
-    const refDate=q.end;
-    const fijos=employees.filter(e=>effectiveTurno(e,refDate)==='FIJO');
-    const rot9=employees.filter(e=>effectiveTurno(e,refDate)==='ROT9');
-    const grpA=employees.filter(e=>effectiveTurno(e,refDate)==='A');
-    const grpB=employees.filter(e=>effectiveTurno(e,refDate)==='B');
-    const r9on10=rot9On1030(q.num);
-
-    // Nota de transición: empleados que cambian de turno DENTRO de esta quincena
-    const transitioning=employees.filter(e=>{
-      if(!e.turnoChangeDate) return false;
-      const cd=new Date(e.turnoChangeDate+'T00:00:00');
-      return cd>=q.start&&cd<=q.end;
-    });
-    let transNote='';
-    if(transitioning.length){
-      const cd=new Date(transitioning[0].turnoChangeDate+'T00:00:00');
-      transNote=`<div style="grid-column:1/-1;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:4px;font-weight:600">⚠️ Cambio de turno el ${fmtDate(cd)}: ${transitioning.map(e=>e.nombre+' → Grupo '+e.turnoChangeTo).join(', ')}</div>`;
-    }
+    const fijos=employees.filter(e=>e.turno==='FIJO');
+    const pool1On10=pool1On1030(q.num);
+    const poolOn10=pool1On10?1:2, poolOn09=pool1On10?2:1;
+    const poolOn09Emps=employees.filter(e=>e.pool===poolOn09);
+    const poolOn10Emps=employees.filter(e=>e.pool===poolOn10);
 
     let satHTML='';
     q.saturdays.forEach(s=>{
       const fg=freeGroupOnSat(s), wg=fg==='A'?'B':'A';
-      const r9l=rot9LibreOnSat(s);
-      const freeG=employees.filter(e=>effectiveTurno(e,s)===fg);
-      const workG=employees.filter(e=>effectiveTurno(e,s)===wg);
-      const rot9OnThisSat=employees.filter(e=>effectiveTurno(e,s)==='ROT9');
+      const freeG=poolOn10Emps.filter(e=>e.turno===fg);
+      const workG=poolOn10Emps.filter(e=>e.turno===wg);
       satHTML+=`<div class="sat-row">
         <div class="sr-date">📅 Sábado ${fmtDate(s)}</div>
-        <div><span class="sr-badge srb-libre">🟢 LIBRE · Gpo ${fg}</span><span style="font-size:11px;color:#065f46">${freeG.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
-        ${r9l?`<div><span class="sr-badge srb-rot">🔵 LIBRE · Rot.</span><span style="font-size:11px;color:#155e75">${rot9OnThisSat.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>`:''}
-        <div><span class="sr-badge srb-work">🔴 TRABAJA · Gpo ${wg}</span><span style="font-size:11px;color:#991b1b">09:30–14:00</span></div>
+        <div><span class="sr-badge srb-libre">🟢 LIBRE · Pool ${poolOn10} Gpo ${fg}</span><span style="font-size:11px;color:#065f46">${freeG.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
+        <div><span class="sr-badge srb-work">🔴 TRABAJA · Pool ${poolOn10} Gpo ${wg}</span><span style="font-size:11px;color:#991b1b">${workG.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
+        <div><span class="sr-badge srb-rot">⚪ Pool ${poolOn09} — sin libre</span><span style="font-size:11px;color:#155e75">${poolOn09Emps.map(e=>e.nombre.split(' ')[0]).join(', ')}</span></div>
       </div>`;
     });
 
     html+=`<div class="qc">
       <div class="qc-head" onclick="toggleQ(this)">
         <div>
-          <h3>Quincena N° ${q.num} &nbsp;<span style="font-size:11px;padding:2px 7px;border-radius:4px;${r9on10?'background:#cffafe;color:#155e75':'background:#ede9fe;color:#5b21b6'}">Rot. → ${r9on10?'10:30':'09:00'}</span></h3>
+          <h3>Quincena N° ${q.num} &nbsp;<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#cffafe;color:#155e75">Pool ${poolOn10} → 10:30</span> <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#ede9fe;color:#5b21b6">Pool ${poolOn09} → 09:00</span></h3>
           <div class="sub">${fmtDate(q.start)} — ${fmtDate(q.end)} · ${q.saturdays.length} sábado(s)</div>
         </div>
         <div class="q-toggle">▼</div>
       </div>
       <div class="qc-body">
-        ${transNote}
         <div class="qg">
-          <h4>Turno Fijo 09:00</h4>
+          <h4>Turno Fijo</h4>
           <span class="qg-badge b09">09:00–17:30 · Sáb 09:00–13:30</span>
           <ul>${fijos.map(e=>`<li class="li-fijo">${e.nombre}</li>`).join('')}</ul>
         </div>
         <div class="qg">
-          <h4>Turno Rotativo</h4>
-          <span class="qg-badge ${r9on10?'b10':'b09'}">${r9on10?'10:30–19:00 · Sáb LIBRE':'09:00–17:30 · Sáb 09:00–13:30'}</span>
-          <ul>${rot9.length?rot9.map(e=>`<li class="${r9on10?'li-r9l':'li-r9w'}">${e.nombre}</li>`).join(''):'<li style="color:#94a3b8;list-style:none">Sin empleados en este turno</li>'}</ul>
+          <h4>Pool ${poolOn09} · sin sábado libre</h4>
+          <span class="qg-badge b09">09:00–17:30 · Sáb trabaja siempre</span>
+          <ul>${poolOn09Emps.length?poolOn09Emps.map(e=>`<li class="li-r9w">${e.nombre}</li>`).join(''):'<li style="color:#94a3b8;list-style:none">Sin empleados en este pool</li>'}</ul>
         </div>
         <div class="qg">
-          <h4>Grupos A y B · 10:30</h4>
-          <span class="qg-badge b10">10:30–19:00 · Sáb rotativo</span>
+          <h4>Pool ${poolOn10} · Grupos A y B</h4>
+          <span class="qg-badge b10">10:30–19:00 · Sáb rotativo (alterna A/B)</span>
           ${satHTML||'<div style="color:#94a3b8;font-size:12px;margin-top:8px">Sin sábados en este período</div>'}
         </div>
       </div>
@@ -1193,31 +1163,31 @@ function qCollapseAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.cla
 // ══════════════════════════════════════════════
 // EMPLOYEES
 // ══════════════════════════════════════════════
-const TLABEL={FIJO:'Fijo 09:00',ROT9:'Rot. 09↔10:30',A:'10:30 · Gpo A',B:'10:30 · Gpo B'};
-const TLIBRE={FIJO:'❌ No aplica',ROT9:'✅ En Q par (10:30)',A:'✅ Alterno · Gpo A',B:'✅ Alterno · Gpo B'};
-
-// Muestra una nota si el empleado tiene un cambio de turno programado a futuro
-function turnoPendingNote(e){
-  if(!e.turnoChangeDate) return '';
-  const cd=new Date(e.turnoChangeDate+'T00:00:00');
-  if(todayDate()>=cd) return '';
-  const toLabel=e.turnoChangeTo==='A'?'Grupo A':e.turnoChangeTo==='B'?'Grupo B':TLABEL[e.turnoChangeTo]||e.turnoChangeTo;
-  return `<br><span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap;display:inline-block;margin-top:3px">→ ${toLabel} desde ${fmtDate(cd)}</span>`;
+// FIJO no tiene grupo A/B; los demás (A/B) alternan 09:00↔10:30 c/quincena
+// según a qué pool pertenezcan, y cuando su pool está en 10:30 alternan
+// también el sábado libre entre Gpo A y Gpo B.
+function empTurnoLabel(e){
+  if(e.turno==='FIJO') return 'Fijo';
+  return `Pool ${e.pool} · Gpo ${e.turno}`;
+}
+function empLibreLabel(e){
+  if(e.turno==='FIJO') return '❌ No aplica (nunca libre)';
+  return `✅ Cuando Pool ${e.pool} está en 10:30, sáb. libre alterno (Gpo ${e.turno})`;
 }
 
 function renderTable(){
   const search=document.getElementById('emp-search').value.toLowerCase();
   const ft=document.getElementById('emp-filter-turno').value;
-  const list=employees.filter(e=>(!ft||e.turno===ft)&&(e.nombre.toLowerCase().includes(search)||e.cargo.toLowerCase().includes(search)));
+  const list=employees.filter(e=>(!ft||matchesFilter(e,ft))&&(e.nombre.toLowerCase().includes(search)||e.cargo.toLowerCase().includes(search)));
   document.getElementById('emp-tbody').innerHTML=list.length
     ?list.map((e,i)=>`<tr>
       <td style="color:#94a3b8">${i+1}</td>
       <td style="font-weight:700">${e.nombre}</td>
       <td style="color:#64748b;font-size:12px">${e.cargo}</td>
-      <td><span class="tb tb-${e.turno}">${TLABEL[e.turno]}</span>${turnoPendingNote(e)}</td>
+      <td><span class="tb tb-${e.turno}">${empTurnoLabel(e)}</span></td>
       <td style="font-size:12px;color:#64748b">${e.lvIn||'—'} – ${e.lvOut||'—'}</td>
       <td style="font-size:12px;color:#64748b">${e.satIn||'—'} – ${e.satOut||'—'}</td>
-      <td style="font-size:12px">${TLIBRE[e.turno]}</td>
+      <td style="font-size:12px">${empLibreLabel(e)}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openEmpModal(${e.id})" style="margin-right:3px">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmp(${e.id})">🗑️</button>
@@ -1227,25 +1197,30 @@ function renderTable(){
 }
 
 function renderEmpStats(){
-  const c={FIJO:0,ROT9:0,A:0,B:0}; employees.forEach(e=>c[e.turno]++);
+  const c={FIJO:0,A:0,B:0}; employees.forEach(e=>c[e.turno]++);
+  const p1=employees.filter(e=>e.pool===1).length, p2=employees.filter(e=>e.pool===2).length;
   document.getElementById('emp-stats').innerHTML=`
-    <div class="sc purple"><div class="sc-num">${c.FIJO}</div><div class="sc-label">Fijo 09:00</div></div>
-    <div class="sc cyan"><div class="sc-num">${c.ROT9}</div><div class="sc-label">Rotativo</div></div>
-    <div class="sc green"><div class="sc-num">${c.A}</div><div class="sc-label">Grupo A 10:30</div></div>
-    <div class="sc red"><div class="sc-num">${c.B}</div><div class="sc-label">Grupo B 10:30</div></div>
+    <div class="sc amber"><div class="sc-num">${c.FIJO}</div><div class="sc-label">Fijo</div></div>
+    <div class="sc purple"><div class="sc-num">${p1}</div><div class="sc-label">Pool 1</div></div>
+    <div class="sc cyan"><div class="sc-num">${p2}</div><div class="sc-label">Pool 2</div></div>
+    <div class="sc green"><div class="sc-num">${c.A}</div><div class="sc-label">Grupo A (sáb.)</div></div>
+    <div class="sc red"><div class="sc-num">${c.B}</div><div class="sc-label">Grupo B (sáb.)</div></div>
     <div class="sc blue"><div class="sc-num">${employees.length}</div><div class="sc-label">Total empleados</div></div>`;
   document.getElementById('hdr-stats').innerHTML=`
     <div class="hdr-stat"><span>${employees.length}</span><small>Empleados</small></div>
-    <div class="hdr-stat"><span>${c.A+c.B+c.ROT9}</span><small>Con sáb. libre</small></div>`;
+    <div class="hdr-stat"><span>${c.A+c.B}</span><small>Con sáb. libre (alterno)</small></div>`;
 }
 
 const EMP_INFO={
-  FIJO:'Turno fijo: lunes–sábado. Sin sábado libre. Al pasar a 10:30 tendrá el beneficio.',
-  ROT9:'Alterna c/quincena: Q impar → 09:00–17:30 (trabaja sáb.) · Q par → 10:30–19:00 (sáb. libre).',
-  A:'Turno 10:30. Sábado libre alternado — libre en sábados pares: 04/07, 18/07, 01/08…',
-  B:'Turno 10:30. Sábado libre alternado — libre en sábados impares: 11/07, 25/07, 08/08…',
+  FIJO:'Turno fijo: lunes–sábado. Sin sábado libre nunca.',
+  A:'Pertenece al Pool indicado. Cuando su pool está en 09:00 trabaja todos los sábados sin libre. Cuando su pool está en 10:30, alterna sábado libre como Grupo A.',
+  B:'Pertenece al Pool indicado. Cuando su pool está en 09:00 trabaja todos los sábados sin libre. Cuando su pool está en 10:30, alterna sábado libre como Grupo B.',
 };
-function updateEmpInfo(){ document.getElementById('emp-modal-info').textContent=EMP_INFO[document.getElementById('f-turno').value]||''; }
+function updateEmpInfo(){
+  const t=document.getElementById('f-turno').value;
+  document.getElementById('emp-modal-info').textContent=EMP_INFO[t]||'';
+  document.getElementById('f-pool-wrap').style.display=(t==='FIJO')?'none':'block';
+}
 
 function openEmpModal(id=null){
   editingEmpId=id;
@@ -1255,22 +1230,20 @@ function openEmpModal(id=null){
     document.getElementById('f-nombre').value=e.nombre;
     document.getElementById('f-cargo').value=e.cargo;
     document.getElementById('f-turno').value=e.turno;
+    document.getElementById('f-pool').value=e.pool||1;
     document.getElementById('f-lv-in').value=e.lvIn||'';
     document.getElementById('f-lv-out').value=e.lvOut||'';
     document.getElementById('f-sat-in').value=e.satIn||'';
     document.getElementById('f-sat-out').value=e.satOut||'';
-    document.getElementById('f-change-date').value=e.turnoChangeDate||'';
-    document.getElementById('f-change-to').value=e.turnoChangeTo||'';
   } else {
     document.getElementById('f-nombre').value='';
     document.getElementById('f-cargo').value='';
     document.getElementById('f-turno').value='FIJO';
+    document.getElementById('f-pool').value='1';
     document.getElementById('f-lv-in').value='09:00';
     document.getElementById('f-lv-out').value='17:30';
     document.getElementById('f-sat-in').value='09:00';
     document.getElementById('f-sat-out').value='13:30';
-    document.getElementById('f-change-date').value='';
-    document.getElementById('f-change-to').value='';
   }
   updateEmpInfo();
   document.getElementById('ov-emp').classList.add('open');
@@ -1279,17 +1252,15 @@ function closeEmpModal(){ document.getElementById('ov-emp').classList.remove('op
 function saveEmployee(){
   const nombre=document.getElementById('f-nombre').value.trim();
   if(!nombre){alert('Ingresa el nombre');return;}
-  const changeDate=document.getElementById('f-change-date').value;
-  const changeTo=document.getElementById('f-change-to').value;
+  const turno=document.getElementById('f-turno').value;
   const data={
     nombre,cargo:document.getElementById('f-cargo').value.trim(),
-    turno:document.getElementById('f-turno').value,
+    turno,
+    pool: turno==='FIJO'?null:parseInt(document.getElementById('f-pool').value),
     lvIn:document.getElementById('f-lv-in').value||'09:00',
     lvOut:document.getElementById('f-lv-out').value||'17:30',
     satIn:document.getElementById('f-sat-in').value||'09:00',
     satOut:document.getElementById('f-sat-out').value||'13:30',
-    turnoChangeDate: (changeDate&&changeTo)?changeDate:null,
-    turnoChangeTo: (changeDate&&changeTo)?changeTo:null,
   };
   if(editingEmpId){ Object.assign(employees.find(e=>e.id===editingEmpId),data); }
   else { employees.push({id:nextId++,...data}); }
@@ -1309,18 +1280,18 @@ function renderReport(){
   const from=new Date(document.getElementById('rep-from').value+'T00:00:00');
   const to=new Date(document.getElementById('rep-to').value+'T00:00:00');
   const shift=document.getElementById('rep-shift').value;
-  const empList=shift?employees.filter(e=>effectiveTurno(e,to)===shift):employees;
+  const empList=shift?employees.filter(e=>matchesFilter(e,shift)):employees;
 
   let title='',thead='',rows=[];
 
   if(type==='horario'){
     title='Horario por Quincena';
-    thead='<tr><th>Quincena</th><th>Período</th><th>Turno Rotativos</th><th>Fijo 09:00</th><th>Rot. 09:00</th><th>10:30 Sáb Libre</th><th>Sábados</th></tr>';
+    thead='<tr><th>Quincena</th><th>Período</th><th>Pool 1</th><th>Pool 2</th><th>Fijo</th><th>Sábados</th></tr>';
     getQuincenas().forEach(q=>{
       if(q.start>to||q.end<from) return;
-      const r9=rot9On1030(q.num);
-      const satInfo=q.saturdays.map(s=>`${fmtDate(s)}: Libre Gpo ${freeGroupOnSat(s)}${rot9LibreOnSat(s)?'+Rot':''}`).join(' | ');
-      rows.push(`<tr><td>Q${q.num}</td><td>${fmtDate(q.start)} – ${fmtDate(q.end)}</td><td>${r9?'10:30–19:00':'09:00–17:30'}</td><td>09:00–17:30 / Sáb 09:00–13:30</td><td>${r9?'10:30–19:00':'09:00–17:30'}</td><td>10:30–19:00 / Sáb LIBRE alterno</td><td>${satInfo||'—'}</td></tr>`);
+      const p1on10=pool1On1030(q.num);
+      const satInfo=q.saturdays.map(s=>`${fmtDate(s)}: Libre Gpo ${freeGroupOnSat(s)}`).join(' | ');
+      rows.push(`<tr><td>Q${q.num}</td><td>${fmtDate(q.start)} – ${fmtDate(q.end)}</td><td>${p1on10?'10:30–19:00 · Sáb rotativo':'09:00–17:30 · Sáb sin libre'}</td><td>${p1on10?'09:00–17:30 · Sáb sin libre':'10:30–19:00 · Sáb rotativo'}</td><td>09:00–17:30 / Sáb 09:00–13:30</td><td>${satInfo||'—'}</td></tr>`);
     });
   } else if(type==='ausencias'){
     title='Ausencias y Modificaciones';
@@ -1331,8 +1302,8 @@ function renderReport(){
       Object.entries(overrides[k]).forEach(([eid,v])=>{
         if(v.status==='normal') return;
         const e=employees.find(x=>x.id===parseInt(eid));
-        if(!e||shift&&e.turno!==shift) return;
-        rows.push(`<tr><td>${fmtDate(d)}</td><td>${DAYS[d.getDay()]}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}</td><td>${statusLabel(v.status)}</td><td>${v.note||'—'}</td></tr>`);
+        if(!e||(shift&&!matchesFilter(e,shift))) return;
+        rows.push(`<tr><td>${fmtDate(d)}</td><td>${DAYS[d.getDay()]}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${empTurnoLabel(e)}</td><td>${statusLabel(v.status)}</td><td>${v.note||'—'}</td></tr>`);
       });
     });
     if(!rows.length) rows.push('<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">Sin ausencias registradas en el período</td></tr>');
@@ -1343,18 +1314,19 @@ function renderReport(){
       const absCnt=Object.values(overrides).reduce((sum,dov)=>{
         const k2=dov[e.id]; return sum+(k2&&k2.status!=='normal'?1:0);
       },0);
-      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${TLABEL[e.turno]}${turnoPendingNote(e)}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${TLIBRE[e.turno]}</td><td>${absCnt||'—'}</td></tr>`);
+      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${empTurnoLabel(e)}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${empLibreLabel(e)}</td><td>${absCnt||'—'}</td></tr>`);
     });
   } else if(type==='sabados'){
     title='Calendario de Sábados Libres';
-    thead='<tr><th>Fecha Sábado</th><th>Quincena</th><th>Grupo libre</th><th>Personas libres</th><th>Rotativos</th></tr>';
+    thead='<tr><th>Fecha Sábado</th><th>Quincena</th><th>Grupo libre</th><th>Personas libres</th><th>Pool sin libre esa semana</th></tr>';
     let d=new Date(2026,6,4);
     while(d<=new Date(2026,11,31)){
       if(d>=from&&d<=to){
-        const fg=freeGroupOnSat(d), q=quincenaOf(d), r9l=rot9LibreOnSat(d);
-        const freeG=employees.filter(e=>{const et=effectiveTurno(e,d); return et===fg&&(!shift||et===shift);});
-        const rot9=employees.filter(e=>effectiveTurno(e,d)==='ROT9');
-        rows.push(`<tr><td>${fmtDate(d)}</td><td>Q${q}</td><td>Grupo ${fg}</td><td>${freeG.map(e=>e.nombre).join(', ')||'—'}</td><td>${r9l?rot9.map(e=>e.nombre).join(', '):'Trabajan'}</td></tr>`);
+        const {gLibre,g09,q,fg,pool1On10}=getGroups(d);
+        const poolOn09=pool1On10?2:1;
+        const freeG=shift?gLibre.filter(e=>matchesFilter(e,shift)):gLibre;
+        const poolOn09Emps=g09.filter(e=>e.turno!=='FIJO');
+        rows.push(`<tr><td>${fmtDate(d)}</td><td>Q${q}</td><td>Grupo ${fg}</td><td>${freeG.map(e=>e.nombre).join(', ')||'—'}</td><td>Pool ${poolOn09}: ${poolOn09Emps.map(e=>e.nombre).join(', ')||'—'}</td></tr>`);
       }
       d=new Date(d); d.setDate(d.getDate()+7);
     }
@@ -1441,18 +1413,22 @@ function showSaveIndicator(state){
   if(state==='saved') setTimeout(()=>{el.style.opacity='0';},3000);
 }
 
-// Cambios de turno conocidos (usados solo para reparar la planilla la primera
-// vez que se conecta con el Code.gs actualizado, si a la hoja le faltan las
-// columnas turnoChangeDate/turnoChangeTo).
-const TURNO_CHANGE_DEFAULTS = {
-  'Victor Leiva':      {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  'Jesus Calderon':    {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  'Amos Altema':       {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  'Diumetre Clotaire': {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  'Ricardo Rojas':     {turnoChangeDate:'2026-08-15', turnoChangeTo:'A'},
-  'Yosmic Pauldeux':   {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  'Dante Contreras':   {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
-  'Juan Rivera':       {turnoChangeDate:'2026-08-15', turnoChangeTo:'B'},
+// Mapa canónico de Pool + Grupo A/B para cada uno de los 19 empleados
+// rotativos (usado para migrar filas antiguas de la planilla —esquema con
+// turno='ROT9'+turnoChangeDate, o con turno='A'/'B' permanente sin columna
+// pool— al esquema nuevo: turno='A'/'B' + pool=1|2 para todos, alternando
+// 09:00↔10:30 cada quincena según el pool).
+const POOL_MIGRATION_MAP = {
+  'Jesus Calderon':{pool:1,turno:'A'}, 'Amos Altema':{pool:1,turno:'A'},
+  'Diumetre Clotaire':{pool:1,turno:'A'}, 'Ricardo Rojas':{pool:1,turno:'A'},
+  'Victor Leiva':{pool:1,turno:'B'}, 'Yosmic Pauldeux':{pool:1,turno:'B'},
+  'Dante Contreras':{pool:1,turno:'B'}, 'Juan Rivera':{pool:1,turno:'B'},
+  'Segundo Martinez':{pool:2,turno:'A'}, 'Edgar Baldera':{pool:2,turno:'A'},
+  'Danilo Paredes':{pool:2,turno:'A'}, 'Anderson Polo':{pool:2,turno:'A'},
+  'Gilmer Alvarez':{pool:2,turno:'A'}, 'Domingo Querales':{pool:2,turno:'A'},
+  'Felipe Palma':{pool:2,turno:'B'}, 'Alberto Collao':{pool:2,turno:'B'},
+  'Juan Rojas':{pool:2,turno:'B'}, 'Jose Vasquez':{pool:2,turno:'B'},
+  'Bastian Carrasco':{pool:2,turno:'B'},
 };
 
 // Mapa de los IDs ORIGINALES (1-26, con los que se creó la app) a nombre.
@@ -1507,15 +1483,29 @@ async function loadFromSheets(){
         employees=json.data.empleados.map(e=>({
           ...e, id:parseInt(e.id)
         }));
-        // Migración: si la hoja aún no tiene las columnas de cambio de turno
-        // (esquema viejo), aplicamos los valores conocidos y marcamos para re-guardar.
+        // Migración: convierte filas con esquema viejo (turno='ROT9'+turnoChangeDate,
+        // o turno='A'/'B' permanente sin columna pool) al esquema nuevo
+        // (turno='A'/'B' + pool=1|2 para todos los rotativos) y marca para re-guardar.
         employees.forEach(e=>{
-          if(e.turnoChangeDate===undefined){
+          const hasLegacyFields = e.turnoChangeDate!==undefined || e.turnoChangeTo!==undefined;
+          const missingPool = e.turno!=='FIJO' && (e.pool===undefined||e.pool===null||e.pool==='');
+          const isLegacyRot9 = e.turno==='ROT9';
+          if(hasLegacyFields||missingPool||isLegacyRot9){
             needsMigration=true;
-            const def=TURNO_CHANGE_DEFAULTS[e.nombre];
-            e.turnoChangeDate = def ? def.turnoChangeDate : null;
-            e.turnoChangeTo   = def ? def.turnoChangeTo   : null;
+            if(e.turno==='FIJO'){
+              e.pool=null;
+            } else {
+              const def=POOL_MIGRATION_MAP[e.nombre];
+              if(def){ e.turno=def.turno; e.pool=def.pool; }
+              else if(!e.pool){ e.pool=1; } // fallback (no debería ocurrir)
+            }
+          } else if(e.turno!=='FIJO'){
+            e.pool=parseInt(e.pool);
+          } else {
+            e.pool=null;
           }
+          delete e.turnoChangeDate;
+          delete e.turnoChangeTo;
         });
         if(repairKnownDataIssues()) needsMigration=true;
         nextId=Math.max(...employees.map(e=>e.id))+1;
@@ -1650,17 +1640,15 @@ function closeSatMgr(){
 
 function renderSatMgr(){
   if(!satDate) return;
-  const {g09,g10,gLibre,fg,wg,r9libre,q} = getGroups(satDate);
+  const {g09,g10,gLibre,fg,wg,q,pool1On10,pool2On10} = getGroups(satDate);
   const working=[...g09,...g10];
+  const poolOn10Num=pool1On10?1:2;
 
   // Helper: what is the AUTO group for an employee on this Saturday?
   function autoSlot(e){
-    const et=effectiveTurno(e,satDate);
-    if(et==='FIJO') return 'work';
-    if(et==='ROT9') return r9libre?'libre':'work';
-    if(et===fg) return 'libre';
-    if(et===wg) return 'work';
-    return 'work';
+    if(e.turno==='FIJO') return 'work';
+    if(e.pool!==poolOn10Num) return 'work'; // su pool está en 09:00 esta quincena, sin sábado libre
+    return e.turno===fg ? 'libre' : 'work';
   }
 
   function empCard(e, currentSlot, btnClass, btnLabel, btnAction){
