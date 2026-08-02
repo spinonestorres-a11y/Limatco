@@ -410,6 +410,7 @@ tr:hover td{background:#f8fafc;}
   <div class="tab active" data-tab="dashboard"><span class="tab-icon">🏠</span><span>Dashboard</span></div>
   <div class="tab" data-tab="calendario"><span class="tab-icon">📅</span><span>Calendario</span></div>
   <div class="tab" data-tab="quincenas"><span class="tab-icon">📋</span><span>Quincenas</span></div>
+  <div class="tab" data-tab="sectores"><span class="tab-icon">📍</span><span>Ubicación Sábado</span></div>
   <div class="tab" data-tab="empleados"><span class="tab-icon">👥</span><span>Empleados</span></div>
   <div class="tab" data-tab="reportes"><span class="tab-icon">📊</span><span>Reportes</span></div>
 </div>
@@ -480,6 +481,18 @@ tr:hover td{background:#f8fafc;}
     <button class="btn btn-secondary btn-sm" onclick="qCollapseAll()">Colapsar todo</button>
   </div>
   <div id="q-cards"></div>
+</div>
+
+<!-- ══════════ UBICACIÓN SÁBADO (SECTORES) ══════════ -->
+<div class="panel" id="panel-sectores">
+  <div class="cal-toolbar">
+    <button class="btn btn-secondary" onclick="secPrev()">◀</button>
+    <h2 id="sec-title"></h2>
+    <button class="btn btn-secondary" onclick="secNext()">▶</button>
+    <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+  <p style="font-size:12px;color:#64748b;margin-bottom:14px">Asigna a cada trabajador presente el sector/ubicación donde estará este sábado. Los cambios se guardan automáticamente y quedan visibles para todos.</p>
+  <div id="sec-board"></div>
 </div>
 
 <!-- ══════════ EMPLEADOS ══════════ -->
@@ -788,6 +801,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.getElementById('panel-'+t.dataset.tab).classList.add('active');
     if(t.dataset.tab==='dashboard') renderDashboard();
     if(t.dataset.tab==='quincenas') renderQuincenas();
+    if(t.dataset.tab==='sectores') renderSectorBoard();
     if(t.dataset.tab==='empleados'){renderTable();renderEmpStats();}
     if(t.dataset.tab==='reportes') renderReport();
   });
@@ -1164,6 +1178,129 @@ function renderQuincenas(){
 function toggleQ(h){ h.classList.toggle('open'); h.nextElementSibling.classList.toggle('open'); }
 function qExpandAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.classList.add('open');h.nextElementSibling.classList.add('open');}); }
 function qCollapseAll(){ document.querySelectorAll('.qc-head').forEach(h=>{h.classList.remove('open');h.nextElementSibling.classList.remove('open');}); }
+
+// ══════════════════════════════════════════════
+// UBICACIÓN SÁBADO (SECTORES)
+// ══════════════════════════════════════════════
+// Los sectores/ubicaciones físicas donde se asigna a cada trabajador
+// presente un sábado. A diferencia del turno (09:00/10:30) y del Grupo
+// A/B (sábado libre), el sector NO sigue una fórmula fija — lo decide
+// el supervisor cada semana según quién está presente. Por eso esta
+// sección es 100% editable/gestionable, no calculada.
+const SECTORS = ['Sector A','Sector B','Sector C','Sector D','Valija','Flete','Despacho','Grúas'];
+
+// sectorAssignments[dateKey][empId] = sector
+let sectorAssignments = {};
+
+// Semilla real tomada de "Turno sabados libres (1).xlsx" (pestañas
+// "ubicacion sector sabado 01-08" y "08-08"). Las pestañas "22-08" y
+// "29-08" del mismo archivo eran copias-pegadas sin actualizar (mismo
+// título "Sábado 01/08 Agosto" duplicado) y no se usaron como fuente
+// confiable — esos sábados quedan sin asignar para completarlos a mano.
+// Esta semilla solo se aplica la primera vez que la hoja "Sectores" de
+// Google Sheets está vacía (ver loadFromSheets).
+const SECTOR_SEED = {
+  '2026-08-01': {
+    'Jesus Calderon':'Sector A', 'Juan Rojas':'Sector A',
+    'Amos Altema':'Sector B', 'Yosmic Pauldeux':'Sector B',
+    'Diumetre Clotaire':'Sector C', 'Dante Contreras':'Sector C',
+    'Ricardo Rojas':'Sector D', 'Felipe Palma':'Sector D',
+    'Bastian Carrasco':'Despacho', 'Jose Vasquez':'Despacho', 'Marlon Otiniano':'Despacho', 'Juan Rivera':'Despacho',
+    'Victor Leiva':'Grúas', 'Alberto Collao':'Grúas', 'Patricio Lienlaf':'Grúas',
+    'Brayan Sevilla':'Valija', 'James Jean':'Flete',
+  },
+  '2026-08-08': {
+    'Jesus Calderon':'Sector A', 'Edgar Baldera':'Sector A',
+    'Amos Altema':'Sector B', 'Gilmer Alvarez':'Sector B',
+    'Diumetre Clotaire':'Sector C', 'Domingo Querales':'Sector C',
+    'Ricardo Rojas':'Sector D', 'Segundo Martinez':'Sector D',
+    'Marlon Otiniano':'Despacho', 'Yosmic Pauldeux':'Despacho', 'Juan Rivera':'Despacho', 'Dante Contreras':'Despacho', 'Juan Rojas':'Despacho',
+    'Victor Leiva':'Grúas', 'Danilo Paredes':'Grúas', 'Patricio Lienlaf':'Grúas',
+    'Brayan Sevilla':'Valija', 'James Jean':'Flete',
+  },
+};
+function seedSectorAssignments(){
+  Object.entries(SECTOR_SEED).forEach(([dk,map])=>{
+    if(!sectorAssignments[dk]) sectorAssignments[dk]={};
+    Object.entries(map).forEach(([nombre,sector])=>{
+      const e=employees.find(x=>x.nombre===nombre);
+      if(e && !sectorAssignments[dk][e.id]) sectorAssignments[dk][e.id]=sector;
+    });
+  });
+}
+
+let sectorDate=null;
+function initSectorDate(){
+  if(sectorDate) return;
+  let d=todayDate();
+  while(d.getDay()!==6) d.setDate(d.getDate()+1);
+  sectorDate=d;
+}
+function secPrev(){ initSectorDate(); sectorDate=new Date(sectorDate.getTime()-7*864e5); renderSectorBoard(); }
+function secNext(){ initSectorDate(); sectorDate=new Date(sectorDate.getTime()+7*864e5); renderSectorBoard(); }
+
+function assignSector(empId, sector){
+  const dk=dateKey(sectorDate);
+  if(!sectorAssignments[dk]) sectorAssignments[dk]={};
+  if(sector) sectorAssignments[dk][empId]=sector;
+  else delete sectorAssignments[dk][empId];
+  if(Object.keys(sectorAssignments[dk]).length===0) delete sectorAssignments[dk];
+  renderSectorBoard();
+  scheduleSave();
+}
+
+function renderSectorBoard(){
+  initSectorDate();
+  const dk=dateKey(sectorDate);
+  document.getElementById('sec-title').textContent=`Sábado ${fmtDate(sectorDate)}`;
+  const {g09,g10}=getGroups(sectorDate);
+  const working=[...g09,...g10]; // todos los que trabajan ese sábado (ya excluye libres y ausentes)
+  const assigned=sectorAssignments[dk]||{};
+  const sinAsignar=working.filter(e=>!assigned[e.id]);
+
+  let html='';
+  if(!working.length){
+    html='<div style="text-align:center;color:#94a3b8;padding:30px">Esta fecha no es un sábado laborable dentro del período (Jul–Dic 2026).</div>';
+  } else {
+    if(sinAsignar.length){
+      html+=`<div class="card" style="margin-bottom:14px;border:1.5px solid #fde68a;">
+        <div class="card-body">
+          <div class="card-title" style="color:#92400e">⚠️ Sin asignar (${sinAsignar.length})</div>
+          <div class="dp-chips">
+            ${sinAsignar.map(e=>`
+              <span class="dp-chip dpc-fijo" style="display:inline-flex;align-items:center;gap:5px">
+                ${e.nombre}
+                <select onchange="assignSector(${e.id},this.value)" style="border:none;background:transparent;font-size:11px;font-weight:700;color:#7A1215">
+                  <option value="">Asignar…</option>
+                  ${SECTORS.map(s=>`<option value="${s}">${s}</option>`).join('')}
+                </select>
+              </span>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    }
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">';
+    SECTORS.forEach(sector=>{
+      const emps=working.filter(e=>assigned[e.id]===sector);
+      html+=`<div class="qg" style="background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+        <h4>📍 ${sector} (${emps.length})</h4>
+        <div class="dp-chips">
+          ${emps.length?emps.map(e=>`
+            <span class="dp-chip dpc-a" style="display:inline-flex;align-items:center;gap:4px">
+              ${e.nombre}
+              <span style="cursor:pointer;font-weight:800" onclick="assignSector(${e.id},'')" title="Quitar">×</span>
+            </span>`).join(''):'<span style="color:#94a3b8;font-size:12px">— vacío —</span>'}
+        </div>
+        <select onchange="if(this.value){assignSector(parseInt(this.value),'${sector}');} this.value='';" style="margin-top:8px;width:100%;font-size:11px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:5px">
+          <option value="">+ Agregar a ${sector}…</option>
+          ${working.filter(e=>assigned[e.id]!==sector).map(e=>`<option value="${e.id}">${e.nombre}${assigned[e.id]?` (en ${assigned[e.id]})`:''}</option>`).join('')}
+        </select>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  document.getElementById('sec-board').innerHTML=html;
+}
 
 // ══════════════════════════════════════════════
 // EMPLOYEES
@@ -1558,6 +1695,28 @@ async function loadFromSheets(){
         if(!overrides[dk]) overrides[dk]={};
         overrides[dk][empId]={status:a.status,note:a.note||''};
       });
+
+      sectorAssignments={};
+      const sectRows=json.data.sectores||[];
+      sectRows.forEach(s=>{
+        let dk=s.dateKey;
+        if(!dk||!/^\d{4}-\d{2}-\d{2}$/.test(dk)){
+          const parsed=new Date(dk);
+          if(dk&&!isNaN(parsed.getTime())){ dk=dateKey(parsed); needsMigration=true; }
+          else { needsMigration=true; return; }
+        }
+        const empId=resolveCurrentEmpId(s.empId);
+        if(empId===null) return; // empleado ya no existe
+        if(!sectorAssignments[dk]) sectorAssignments[dk]={};
+        sectorAssignments[dk][empId]=s.sector;
+      });
+      if(sectRows.length===0){
+        // Hoja "Sectores" recién creada / sin datos aún: sembramos lo
+        // conocido de la planilla real y marcamos para guardar.
+        seedSectorAssignments();
+        needsMigration=true;
+      }
+
       if(needsMigration){
         // Límite de seguridad: no reintentar la migración más de una vez cada
         // 60s, para no saturar el Apps Script si varias pestañas/dispositivos
@@ -1595,13 +1754,19 @@ async function doSaveToSheets(){
       ausencias.push({dateKey:dk, empId:parseInt(eid), status:v.status, note:v.note||''});
     });
   });
+  const sectores=[];
+  Object.keys(sectorAssignments).forEach(dk=>{
+    Object.entries(sectorAssignments[dk]).forEach(([eid,sector])=>{
+      sectores.push({dateKey:dk, empId:parseInt(eid), sector});
+    });
+  });
   try{
     showSaveIndicator('saving');
     // Se envía por POST (cuerpo de la petición), no por GET con todo
     // codificado en la URL: con ~25 empleados esa URL superaba los 8KB
     // que soporta Apps Script y el guardado fallaba silenciosamente
     // ("Failed to fetch" / Error al guardar).
-    const payload={empleados:employees, ausencias};
+    const payload={empleados:employees, ausencias, sectores};
     const ctrl=new AbortController();
     const timeoutId=setTimeout(()=>ctrl.abort(),20000);
     const r=await fetch(SHEETS_URL,{
@@ -1631,6 +1796,7 @@ function saveState(){
     localStorage.setItem('limatco_emp', JSON.stringify(employees));
     localStorage.setItem('limatco_ovr', JSON.stringify(overrides));
     localStorage.setItem('limatco_nid', String(nextId));
+    localStorage.setItem('limatco_sect', JSON.stringify(sectorAssignments));
   }catch(e){}
 }
 function loadState(){
@@ -1638,9 +1804,12 @@ function loadState(){
     const emp=localStorage.getItem('limatco_emp');
     const ovr=localStorage.getItem('limatco_ovr');
     const nid=localStorage.getItem('limatco_nid');
+    const sect=localStorage.getItem('limatco_sect');
     if(emp){ const parsed=JSON.parse(emp); if(parsed&&parsed.length) employees=parsed; }
     if(ovr){ const parsed=JSON.parse(ovr); if(parsed) overrides=parsed; }
     if(nid){ const n=parseInt(nid); if(n>26) nextId=n; }
+    if(sect){ const parsed=JSON.parse(sect); if(parsed) sectorAssignments=parsed; }
+    if(!sect || Object.keys(sectorAssignments).length===0) seedSectorAssignments();
   }catch(e){}
 }
 
@@ -1649,6 +1818,7 @@ function resetToDefaults(){
   localStorage.removeItem('limatco_emp');
   localStorage.removeItem('limatco_ovr');
   localStorage.removeItem('limatco_nid');
+  localStorage.removeItem('limatco_sect');
   location.reload();
 }
 
