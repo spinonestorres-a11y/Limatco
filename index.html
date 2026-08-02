@@ -489,7 +489,7 @@ tr:hover td{background:#f8fafc;}
     <button class="btn btn-secondary" onclick="secPrev()">◀</button>
     <h2 id="sec-title"></h2>
     <button class="btn btn-secondary" onclick="secNext()">▶</button>
-    <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="btn btn-secondary btn-sm" onclick="printSectorBoard()">🖨️ Imprimir para la muralla</button>
   </div>
   <p style="font-size:12px;color:#64748b;margin-bottom:14px">Asigna a cada trabajador presente el sector/ubicación donde estará este sábado. Los cambios se guardan automáticamente y quedan visibles para todos.</p>
   <div id="sec-board"></div>
@@ -1300,6 +1300,59 @@ function renderSectorBoard(){
     html+='</div>';
   }
   document.getElementById('sec-board').innerHTML=html;
+}
+
+// Vista de impresión limpia (sin menús, sin dropdowns) pensada para
+// pegar en la muralla: nombres grandes agrupados por sector.
+function printSectorBoard(){
+  initSectorDate();
+  const dk=dateKey(sectorDate);
+  const {g09,g10}=getGroups(sectorDate);
+  const working=[...g09,...g10];
+  const assigned=sectorAssignments[dk]||{};
+  const sinAsignar=working.filter(e=>!assigned[e.id]);
+
+  const cardsHTML=SECTORS.map(sector=>{
+    const emps=working.filter(e=>assigned[e.id]===sector);
+    return `<div class="sp-card">
+      <div class="sp-title">${sector}</div>
+      <div class="sp-names">${emps.length?emps.map(e=>`<div class="sp-name">${e.nombre}</div>`).join(''):'<div class="sp-empty">— sin asignar —</div>'}</div>
+    </div>`;
+  }).join('');
+
+  const warnHTML=sinAsignar.length
+    ?`<div class="sp-warn">⚠ Sin sector asignado: ${sinAsignar.map(e=>e.nombre).join(', ')}</div>`
+    :'';
+
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ubicación Sábado ${fmtDate(sectorDate)}</title>
+<style>
+  @page { size: landscape; margin: 10mm; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:8mm;}
+  .sp-hdr{text-align:center;margin-bottom:12mm;}
+  .sp-hdr h1{font-size:32px;color:#7A1215;letter-spacing:.5px;}
+  .sp-hdr h2{font-size:20px;color:#374151;margin-top:5px;font-weight:600;}
+  .sp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8mm;}
+  .sp-card{border:3px solid #7A1215;border-radius:10px;overflow:hidden;break-inside:avoid;page-break-inside:avoid;}
+  .sp-title{background:#7A1215;color:#fff;text-align:center;font-size:22px;font-weight:800;padding:9px 4px;text-transform:uppercase;letter-spacing:.5px;}
+  .sp-names{padding:12px 10px;min-height:70px;}
+  .sp-name{font-size:23px;font-weight:700;padding:7px 0;border-bottom:1px solid #e2e8f0;text-align:center;}
+  .sp-name:last-child{border-bottom:none;}
+  .sp-empty{font-size:14px;color:#94a3b8;text-align:center;padding:14px 0;font-style:italic;}
+  .sp-warn{margin-top:10mm;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:9px 14px;font-size:14px;color:#92400e;font-weight:600;}
+  .sp-footer{margin-top:8mm;text-align:right;font-size:10px;color:#94a3b8;}
+</style></head><body>
+  <div class="sp-hdr">
+    <h1>📍 UBICACIÓN SÁBADO</h1>
+    <h2>Sábado ${fmtDate(sectorDate)}</h2>
+  </div>
+  <div class="sp-grid">${cardsHTML}</div>
+  ${warnHTML}
+  <div class="sp-footer">Bodega BLA · Limatco S.A. · Generado ${new Date().toLocaleString('es-CL')}</div>
+</body></html>`);
+  w.document.close();
+  w.print();
 }
 
 // ══════════════════════════════════════════════
