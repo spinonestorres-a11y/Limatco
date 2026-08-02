@@ -997,27 +997,32 @@ function showDayDetail(date){
   const fijos=g09.filter(e=>e.turno==='FIJO');
   const poolOn09=g09.filter(e=>e.turno!=='FIJO');
 
-  const chip=(e,cls)=>{
+  // hoursLabel se pasa explícito (no se lee de e.lvIn/satIn para los de Pool,
+  // porque esos campos son solo un valor base y no reflejan el horario
+  // vigente esta quincena — ver empCurrentSchedule). Para Fijo sí usamos
+  // el horario propio de cada persona, porque ahí es genuinamente individual.
+  const chip=(e,cls,hoursLabel)=>{
     const ov=getOverride(date,e.id);
     const ab=ov&&ov.status!=='normal';
     const badge=ab?statusBadge(ov.status):'';
     const chipCls=ab?'dpc-absent':cls;
-    return `<span class="dp-chip ${chipCls}" title="${e.cargo}${ab?' — '+statusLabel(ov.status):''}">${e.nombre}${badge}</span>`;
+    const hrs=hoursLabel?` · ${hoursLabel}`:'';
+    return `<span class="dp-chip ${chipCls}" title="${e.cargo}${hrs}${ab?' — '+statusLabel(ov.status):''}">${e.nombre}${badge}</span>`;
   };
 
   let body='';
   if(isSat){
     const workCnt=fijos.length+poolOn09.length+g10.length;
     const libreCnt=gLibre.length;
-    let w=`<div class="sublbl">Turno Fijo · ${fijos[0]?.satIn||'09:00'}–${fijos[0]?.satOut||'13:30'}</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
-    w+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) — sin libre · ${poolOn09[0]?.satIn||'09:30'}–${poolOn09[0]?.satOut||'14:00'}</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
-    w+=`<div class="sublbl">Pool ${poolOn10Num} · Grupo ${wg} · 10:30–19:00 · Sáb ${g10[0]?.satIn||'09:30'}–${g10[0]?.satOut||'14:00'}</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-b')).join('')}</div>`;
+    let w=`<div class="sublbl">Turno Fijo · horario individual (ver cada persona)</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo',`${e.satIn||'09:00'}–${e.satOut||'13:30'}`)).join('')}</div>`;
+    w+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) — sin libre · 09:00–13:30</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w','09:00–13:30')).join('')}</div>`;
+    w+=`<div class="sublbl">Pool ${poolOn10Num} · Grupo ${wg} · Sáb 09:30–14:00</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-b','09:30–14:00')).join('')}</div>`;
     let l=`<div class="sublbl">Pool ${poolOn10Num} · Grupo ${fg} · Sábado LIBRE</div><div class="dp-chips">${gLibre.map(e=>chip(e,'dpc-a')).join('')}</div>`;
     body=`<div class="dp-section work09"><h4>⚙️ Trabajan (${workCnt})</h4>${w}</div><div class="dp-section libre"><h4>🎉 Libre (${libreCnt})</h4>${l}</div>`;
   } else {
-    let h09=`<div class="sublbl">Turno Fijo · 09:00–17:30</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo')).join('')}</div>`;
-    h09+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) · 09:00–17:30</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w')).join('')}</div>`;
-    let h10=`<div class="sublbl">Pool ${poolOn10Num} (Q${q} en 10:30) · 10:30–19:00</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-rot9-l')).join('')}</div>`;
+    let h09=`<div class="sublbl">Turno Fijo · horario individual (ver cada persona)</div><div class="dp-chips">${fijos.map(e=>chip(e,'dpc-fijo',`${e.lvIn||'09:00'}–${e.lvOut||'17:30'}`)).join('')}</div>`;
+    h09+=`<div class="sublbl">Pool ${poolOn09Num} (Q${q} en 09:00) · 09:00–17:30</div><div class="dp-chips">${poolOn09.map(e=>chip(e,'dpc-rot9-w','09:00–17:30')).join('')}</div>`;
+    let h10=`<div class="sublbl">Pool ${poolOn10Num} (Q${q} en 10:30) · 10:30–19:00</div><div class="dp-chips">${g10.map(e=>chip(e,'dpc-rot9-l','10:30–19:00')).join('')}</div>`;
     body=`<div class="dp-section work09"><h4>🟣 09:00–17:30 (${g09.length})</h4>${h09}</div><div class="dp-section work10"><h4>🔵 10:30–19:00 (${g10.length})</h4>${h10}</div>`;
   }
   document.getElementById('dp-body').innerHTML=body;
@@ -1175,25 +1180,50 @@ function empLibreLabel(e){
   return `✅ Cuando Pool ${e.pool} está en 10:30, sáb. libre alterno (Gpo ${e.turno})`;
 }
 
+// Las horas de los empleados de Pool (A/B) NO son fijas: alternan 09:00↔10:30
+// cada quincena según a qué pool pertenecen (ver poolOn1030). Los campos
+// e.lvIn/lvOut/satIn/satOut guardados en el objeto son solo un valor base
+// y NO deben mostrarse tal cual para ellos, o se ve un horario incorrecto
+// la mitad del tiempo. Esta función calcula el horario VIGENTE para la
+// quincena de referencia (por defecto, la de hoy).
+function empCurrentSchedule(e, refDate=todayDate()){
+  if(e.turno==='FIJO'){
+    return { lv:`${e.lvIn||'—'} – ${e.lvOut||'—'}`, sat:`${e.satIn||'—'} – ${e.satOut||'—'}` };
+  }
+  const q=quincenaOf(refDate);
+  const on10=poolOn1030(e.pool,q);
+  if(!on10){
+    return { lv:'09:00 – 17:30', sat:'09:00 – 13:30 (sin libre)' };
+  }
+  return { lv:'10:30 – 19:00', sat:`09:30 – 14:00 (si no libra, Gpo ${e.turno})` };
+}
+
 function renderTable(){
   const search=document.getElementById('emp-search').value.toLowerCase();
   const ft=document.getElementById('emp-filter-turno').value;
   const list=employees.filter(e=>(!ft||matchesFilter(e,ft))&&(e.nombre.toLowerCase().includes(search)||e.cargo.toLowerCase().includes(search)));
+  const q=quincenaOf(todayDate());
   document.getElementById('emp-tbody').innerHTML=list.length
-    ?list.map((e,i)=>`<tr>
+    ?list.map((e,i)=>{
+      const sch=empCurrentSchedule(e);
+      return `<tr>
       <td style="color:#94a3b8">${i+1}</td>
       <td style="font-weight:700">${e.nombre}</td>
       <td style="color:#64748b;font-size:12px">${e.cargo}</td>
       <td><span class="tb tb-${e.turno}">${empTurnoLabel(e)}</span></td>
-      <td style="font-size:12px;color:#64748b">${e.lvIn||'—'} – ${e.lvOut||'—'}</td>
-      <td style="font-size:12px;color:#64748b">${e.satIn||'—'} – ${e.satOut||'—'}</td>
+      <td style="font-size:12px;color:#64748b">${sch.lv}</td>
+      <td style="font-size:12px;color:#64748b">${sch.sat}</td>
       <td style="font-size:12px">${empLibreLabel(e)}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openEmpModal(${e.id})" style="margin-right:3px">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmp(${e.id})">🗑️</button>
       </td>
-    </tr>`).join('')
+    </tr>`;}).join('')
     :'<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:30px">Sin resultados</td></tr>';
+  const thEl=document.querySelector('#panel-empleados table thead tr th:nth-child(5)');
+  if(thEl) thEl.textContent=`Horario Sem. (Q${q})`;
+  const thEl2=document.querySelector('#panel-empleados table thead tr th:nth-child(6)');
+  if(thEl2) thEl2.textContent=`Horario Sáb. (Q${q})`;
 }
 
 function renderEmpStats(){
@@ -1309,12 +1339,13 @@ function renderReport(){
     if(!rows.length) rows.push('<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">Sin ausencias registradas en el período</td></tr>');
   } else if(type==='empleado'){
     title='Detalle por Empleado';
-    thead='<tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Turno</th><th>Horario Lun–Vie</th><th>Horario Sábado</th><th>Sábado libre</th><th>Ausencias</th></tr>';
+    thead=`<tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Turno</th><th>Horario Lun–Vie (Q${quincenaOf(to)})</th><th>Horario Sábado (Q${quincenaOf(to)})</th><th>Sábado libre</th><th>Ausencias</th></tr>`;
     empList.forEach((e,i)=>{
       const absCnt=Object.values(overrides).reduce((sum,dov)=>{
         const k2=dov[e.id]; return sum+(k2&&k2.status!=='normal'?1:0);
       },0);
-      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${empTurnoLabel(e)}</td><td>${e.lvIn}–${e.lvOut}</td><td>${e.satIn}–${e.satOut}</td><td>${empLibreLabel(e)}</td><td>${absCnt||'—'}</td></tr>`);
+      const sch=empCurrentSchedule(e,to);
+      rows.push(`<tr><td>${i+1}</td><td>${e.nombre}</td><td>${e.cargo}</td><td>${empTurnoLabel(e)}</td><td>${sch.lv}</td><td>${sch.sat}</td><td>${empLibreLabel(e)}</td><td>${absCnt||'—'}</td></tr>`);
     });
   } else if(type==='sabados'){
     title='Calendario de Sábados Libres';
